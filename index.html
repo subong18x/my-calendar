@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 근무 & 고양/킨텍스 콘서트 달력</title>
+    <title>내 근무 달력</title>
     <style>
         body {
             font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -78,12 +78,10 @@
             font-size: 1rem;
             margin-bottom: 4px;
         }
-        
         .date-cell.public-holiday .date-num {
             color: #cf222e !important;
             font-weight: bold;
         }
-        
         .shift-badge {
             font-size: 0.7rem;
             font-weight: bold;
@@ -93,7 +91,6 @@
         }
         .shift-day { background-color: #fff8c5; color: #9a6700; }
         .shift-night { background-color: #f2e6ff; color: #6f30a0; }
-        
         .shift-off { background-color: #ddf4ff; color: #0969da; }
         .date-cell.off-day-bg {
             background-color: #f0f8ff;
@@ -102,7 +99,6 @@
             color: #0969da;
             font-weight: bold;
         }
-
         .event-text {
             font-size: 0.55rem;
             line-height: 1.2;
@@ -117,7 +113,6 @@
             margin-top: 2px;
             text-align: center;
         }
-
         .date-cell.today {
             border: 2px solid #2da44e;
             box-sizing: border-box;
@@ -176,22 +171,19 @@
     let currentDate = new Date();
 
     const BASE_YEAR = 2026;
-    const BASE_MONTH = 7; // 8월
+    const BASE_MONTH = 7; 
 
-    // 오전/오후 교대 연동을 위한 기준날짜 고정 (2026년 8월 6일 목요일 = 오전 시작 주차)
     const SHIFT_START_DATE = new Date(2026, 7, 6, 0, 0, 0, 0);
     const START_WEEK_SHIFT = 'DAY'; 
 
     const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
-    // 법정 공휴일 데이터
     const PUBLIC_HOLIDAYS = {
         '2026-08-15': true, '2026-08-17': true, '2026-09-24': true,
         '2026-09-25': true, '2026-09-26': true, '2026-10-03': true,
         '2026-10-05': true, '2026-10-09': true, '2026-12-25': true
     };
 
-    // 콘서트 스케줄 데이터 (As of August 2026)
     const REGIONAL_EVENTS = {
         '2026-08-21': '빅뱅 콘서트(종합운동장)',
         '2026-08-22': '빅뱅 콘서트(종합운동장)',
@@ -222,7 +214,6 @@
         return [day1 < 0 ? day1 + 7 : day1, day2 < 0 ? day2 + 7 : day2];
     }
 
-    // 타임존 에러 완벽 해결: 시/분/초 오차를 없애고 주차 차이를 일수 기반으로 계산
     function getShiftTypeForDate(targetDate) {
         const tThursday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
         const tDayOffset = (tThursday.getDay() - 4 + 7) % 7;
@@ -273,3 +264,6 @@
                     badge.classList.add('shift-night'); badge.textContent = '오후'; 
                 } 
                 else if (year === 2026 && month === 7 && (day >= 6 && day <= 10)) { 
+                    badge.classList.add('shift-day'); badge.textContent = '오전'; 
+                }
+                else {
