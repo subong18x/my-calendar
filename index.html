@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 근무 & 고양/킨텍스 행사 & 공휴일 달력</title>
+    <title>내 교대 근무 & 자동 로테이션 달력</title>
     <style>
         body {
             font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -93,14 +93,21 @@
         .shift-day { background-color: #fff8c5; color: #9a6700; } /* 오전 */
         .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 오후 */
         
-        /* 🔵 [수정] 휴무 뱃지 색상을 파란색 테마로 전면 변경 */
+        /* 🔵 블루 테마 휴무 스타일 */
         .shift-off { background-color: #ddf4ff; color: #0969da; }
+        .date-cell.off-day-bg { 
+            background-color: #f0f8ff !important; 
+        }
+        .date-cell.off-day-bg .date-num { 
+            color: #0969da !important; 
+            font-weight: bold; 
+        }
 
         .event-text {
             font-size: 0.55rem;
             line-height: 1.2;
             color: #ffffff;
-            background-color: #57606a; /* 일반 행사는 가독성을 위해 회색으로 조정 */
+            background-color: #57606a;
             border-radius: 3px;
             padding: 1px 2px;
             width: 92%;
@@ -111,32 +118,63 @@
             text-align: center;
         }
         .event-text.concert {
-            background-color: #8a3ffc; /* 콘서트는 보라색 */
+            background-color: #8a3ffc;
         }
         .event-text.holiday-label {
-            background-color: #cf222e; /* 공휴일 이름 표시는 빨간색 */
+            background-color: #cf222e;
             font-weight: bold;
-        }
-
-        /* 🔵 [수정] 휴무일 칸 배경색을 부드러운 연파란색으로 변경 */
-        .date-cell.off-day-bg { 
-            background-color: #f0f8ff; 
-        }
-        /* 🔵 [수정] 휴무일 날짜 숫자 색상을 파란색으로 변경 */
-        .date-cell.off-day-bg .date-num { 
-            color: #0969da; 
-            font-weight: bold; 
         }
         
         .date-cell.today { border: 2px solid #2da44e; box-sizing: border-box; }
         .date-cell.empty { cursor: default; }
-        .info-panel {
+        
+        /* ⚙️ 컨트롤 패널 스타일 조절 */
+        .control-panel {
             margin-top: 15px;
+            background-color: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .control-title {
             font-size: 0.85rem;
+            font-weight: bold;
+            color: #24292f;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+        .control-select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #d0d7de;
+            background-color: #ffffff;
+            font-weight: 500;
+        }
+        .control-btn {
+            background-color: #2da44e;
+            color: white;
+            border: 1px solid rgba(27,31,36,0.15);
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .control-btn:hover { background-color: #2c974b; }
+        
+        .info-panel {
+            margin-top: 10px;
+            font-size: 0.82rem;
             color: #57606a;
-            line-height: 1.6;
-            border-top: 1px solid #d0d7de;
-            padding-top: 12px;
+            line-height: 1.5;
         }
         .legend { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
     </style>
@@ -154,9 +192,24 @@
     </div>
     <div class="dates-grid" id="datesGrid"></div>
     
+    <!-- ⚙️ 자동으로 미래까지 일괄 변환해주는 설정 스위치 패널 -->
+    <div class="control-panel">
+        <div class="control-title">⚙️ 내 근무 주기 설정 (자동 일괄 계산)</div>
+        <div class="control-row">
+            <label for="patternSelect">현재 적용할 3달 주기 형태:</label>
+            <select id="patternSelect" class="control-select">
+                <option value="0">8~9월형 (화, 수 휴무)</option>
+                <option value="1">10~12월형 (월, 화 휴무)</option>
+                <option value="2">1~3월형 (일, 월 휴무)</option>
+                <option value="3">4~6월형 (토, 일 휴무)</option>
+            </select>
+            <button id="applyBtn" class="control-btn">주기 변경 적용</button>
+        </div>
+    </div>
+
     <div class="info-panel">
         <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">이번 달 휴무: 계산 중...</div>
-        <div>💡 규칙: 3개월마다 휴무 변동 / 일주일마다 오전 오후 교대</div>
+        <div>💡 안내: 주기를 선택하고 버튼을 누르면 미래의 모든 날짜가 자동 변환됩니다.</div>
         <div class="legend">
             <span class="shift-badge shift-day">오전 오전근무</span>
             <span class="shift-badge shift-night">오후 오후근무</span>
@@ -171,24 +224,26 @@
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const currentRuleText = document.getElementById('currentRuleText');
+    const patternSelect = document.getElementById('patternSelect');
+    const applyBtn = document.getElementById('applyBtn');
 
     let currentDate = new Date();
 
-    const BASE_YEAR = 2026; const BASE_MONTH = 7;
-    const SHIFT_START_DATE = new Date(2026, 7, 6); const START_WEEK_SHIFT = 'DAY';
+    // 2026년 8월 기준 기본 고정값 정의
+    const BASE_YEAR = 2026;
+    const BASE_MONTH = 7; // 8월
+
+    // 주야 로테이션 연동 일주일 기준점 고정
+    const SHIFT_START_DATE = new Date(2026, 7, 6);
+    const START_WEEK_SHIFT = 'DAY'; 
+
     const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
     // 🇰🇷 대한민국 법정 공휴일 데이터
     const PUBLIC_HOLIDAYS = {
-        '2026-08-15': '광복절',
-        '2026-08-17': '대체공휴일(광복절)',
-        '2026-09-24': '추석 연휴',
-        '2026-09-25': '추석',
-        '2026-09-26': '추석 연휴',
-        '2026-10-03': '개천절',
-        '2026-10-05': '대체공휴일(개천절)',
-        '2026-10-09': '한글날',
-        '2026-12-25': '성탄절'
+        '2026-08-15': '광복절', '2026-08-17': '대체공휴일', '2026-09-24': '추석 연휴',
+        '2026-09-25': '추석', '2026-09-26': '추석 연휴', '2026-10-03': '개천절',
+        '2026-10-05': '대체공휴일', '2026-10-09': '한글날', '2026-12-25': '성탄절'
     };
 
     // 🏛️ 고양시 대형 행사 일정 데이터
@@ -209,53 +264,25 @@
         '2026-09-06': { name: '임영웅 콘서트(종합운동장)', type: 'concert' },
         '2026-10-02': { name: '포스트말론 공연(종합운동장)', type: 'concert' },
         '2026-10-08': { name: '더위켄드 공연(종합운동장)', type: 'concert' },
-        '2026-10-11': { name: '찰리푸스 콘서트(종합운동장)', type: 'concert' },
-        '2026-10-14': { name: '한국산업대전(킨텍스)', type: 'expo' },
-        '2026-10-15': { name: '한국산업대전(킨텍스)', type: 'expo' },
-        '2026-10-16': { name: '한국산업대전(킨텍스)', type: 'expo' }
+        '2026-10-11': { name: '찰리푸스 콘서트(종합운동장)', type: 'concert' }
     };
 
+    // 💾 사용자 임의 오프셋 (기본 0단계 = 8월에 화수 쉬는 규칙)
+    let globalOffset = parseInt(localStorage.getItem('shiftPatternOffset')) || 0;
+    patternSelect.value = globalOffset; // 저장되어 있던 값을 스위치 단추에 동기화
+
+    // 수동 주기 변경 버튼을 클릭했을 때 작동하는 처리기
+    applyBtn.addEventListener('click', () => {
+        globalOffset = parseInt(patternSelect.value);
+        localStorage.setItem('shiftPatternOffset', globalOffset); // 저장소에 기록 보관
+        renderCalendar(currentDate); // 달력 즉시 다시 그리기
+        alert("🔄 선택하신 기준으로 모든 달력의 주기가 자동 일괄 계산되었습니다!");
+    });
+
+    // 핵심: 사용자가 스위칭한 오프셋 단계를 누적하여 달력 연월별 휴무 요일을 매핑하는 수식
     function getOffDaysForMonth(year, month) {
         const elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
-        let period = elapsedMonths >= 0 ? (elapsedMonths <= 1 ? 0 : (elapsedMonths <= 4 ? 1 : 1 + Math.floor((elapsedMonths - 2) / 3))) : Math.floor(elapsedMonths / 3);
-        let day1 = (2 - period) % 7; let day2 = (3 - period) % 7;
-        return [day1 < 0 ? day1 + 7 : day1, day2 < 0 ? day2 + 7 : day2];
-    }
-
-    function getShiftTypeForDate(targetDate) {
-        const targetThursday = new Date(targetDate);
-        targetThursday.setDate(targetThursday.getDate() - (targetThursday.getDay() - 4 + 7) % 7);
-        const startThursday = new Date(SHIFT_START_DATE);
-        const diffWeeks = Math.round((targetThursday - startThursday.setHours(0,0,0,0)) / (1000 * 60 * 60 * 24 * 7));
-        return (diffWeeks % 2 + 2) % 2 === 1 ? (START_WEEK_SHIFT === 'DAY' ? 'NIGHT' : 'DAY') : START_WEEK_SHIFT;
-    }
-
-    function renderCalendar(date) {
-        const year = date.getFullYear(); const month = date.getMonth();
-        monthYearTitle.textContent = `${year}년 ${month + 1}월`;
-
-        const [offDay1, offDay2] = getOffDaysForMonth(year, month);
-        currentRuleText.textContent = `📅 이 달의 휴무: 매주 [${DAY_NAMES[offDay1]}, ${DAY_NAMES[offDay2]}]요일`;
-        const firstDayIndex = new Date(year, month, 1).getDay();
-        const lastDate = new Date(year, month + 1, 0).getDate();
-
-        datesGrid.innerHTML = '';
-        for (let i = 0; i < firstDayIndex; i++) {
-            const emptyCell = document.createElement('div'); emptyCell.classList.add('date-cell', 'empty'); datesGrid.appendChild(emptyCell);
-        }
-
-        const today = new Date();
-        for (let day = 1; day <= lastDate; day++) {
-            const dateCell = document.createElement('div'); dateCell.classList.add('date-cell');
-            const numDiv = document.createElement('div'); numDiv.classList.add('date-num'); numDiv.textContent = day; dateCell.appendChild(numDiv);
-
-            const thisDate = new Date(year, month, day); const currentDayOfWeek = thisDate.getDay();
-            const badge = document.createElement('span'); badge.classList.add('shift-badge');
-
-            const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-            if (PUBLIC_HOLIDAYS[dateString]) {
-                dateCell.classList.add('public-holiday');
-            }
-
-            // 1. 고정 교대 휴무일 체크
+        let period = 0;
+        
+        if (elapsedMonths >= 0) {
+            if (elapsedMonths <= 1) { period = 0; } 
