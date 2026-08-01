@@ -21,7 +21,7 @@
             border: 1px solid #d0d7de;
             border-radius: 6px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-            width: 440px; /* 콘서트 텍스트 출력을 위해 가로폭을 최적화했습니다 */
+            width: 440px;
             padding: 20px;
         }
         .calendar-header {
@@ -69,7 +69,7 @@
             color: #24292f;
             border-radius: 6px;
             font-weight: 500;
-            min-height: 80px; /* 콘서트 이름 공간을 위해 세로폭을 충분히 잡았습니다 */
+            min-height: 80px;
             vertical-align: top;
         }
         .date-num {
@@ -77,7 +77,6 @@
             margin-bottom: 4px;
         }
         
-        /* 🔴 법정 공휴일 숫자 스타일 */
         .date-cell.public-holiday .date-num {
             color: #cf222e !important;
             font-weight: bold;
@@ -90,10 +89,9 @@
             border-radius: 3px;
             margin-bottom: 3px;
         }
-        .shift-day { background-color: #fff8c5; color: #9a6700; } /* 오전 */
-        .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 오후 */
+        .shift-day { background-color: #fff8c5; color: #9a6700; }
+        .shift-night { background-color: #f2e6ff; color: #6f30a0; }
         
-        /* 🔵 파란색 휴무일 스타일 */
         .shift-off { background-color: #ddf4ff; color: #0969da; }
         .date-cell.off-day-bg {
             background-color: #f0f8ff;
@@ -103,12 +101,11 @@
             font-weight: bold;
         }
 
-        /* 🎵 콘서트/행사 텍스트 스타일 */
         .event-text {
             font-size: 0.55rem;
             line-height: 1.2;
             color: #ffffff;
-            background-color: #8a3ffc; /* 콘서트는 세련된 보라색 상자로 표시 */
+            background-color: #8a3ffc;
             border-radius: 3px;
             padding: 1px 2px;
             width: 92%;
@@ -184,33 +181,26 @@
 
     const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
-    // 🇰🇷 대한민국 법정 공휴일 데이터
+    // 법정 공휴일 데이터
     const PUBLIC_HOLIDAYS = {
         '2026-08-15': true, '2026-08-17': true, '2026-09-24': true,
         '2026-09-25': true, '2026-09-26': true, '2026-10-03': true,
         '2026-10-05': true, '2026-10-09': true, '2026-12-25': true
     };
 
-    // 🏛️ 고양종합운동장 및 킨텍스 대형 공연/콘서트 핵심 데이터 연동
+    // 콘서트 스케줄 (As of August 2026)
     const REGIONAL_EVENTS = {
-        // 8월 빅뱅 콘서트
         '2026-08-21': '빅뱅 콘서트(종합운동장)',
         '2026-08-22': '빅뱅 콘서트(종합운동장)',
         '2026-08-23': '빅뱅 콘서트(종합운동장)',
-        
-        // 9월 임영웅 스타디움 단독 콘서트
         '2026-09-04': '임영웅 콘서트(종합운동장)',
         '2026-09-05': '임영웅 콘서트(종합운동장)',
         '2026-09-06': '임영웅 콘서트(종합운동장)',
-        
-        // 10월 글로벌 팝스타 내한 공연 시리즈
         '2026-10-02': '포스트말론 공연(종합운동장)',
         '2026-10-03': '레이니 콘서트(킨텍스)',
         '2026-10-08': '더위켄드 공연(종합운동장)',
         '2026-10-11': '찰리푸스 콘서트(종합운동장)',
         '2026-10-17': '놀 유니버스 페스티벌(킨텍스)',
-        
-        // 11월 감성 내한 공연 시리즈
         '2026-11-14': '제이슨므라즈 콘서트(킨텍스)',
         '2026-11-19': '5SOS 내한공연(킨텍스)'
     };
@@ -229,12 +219,18 @@
         return [day1 < 0 ? day1 + 7 : day1, day2 < 0 ? day2 + 7 : day2];
     }
 
+    // [버그 수정 구문] 타임스탬프 밀림 현상 방지를 위해 setHours 로직 전면 재수정
     function getShiftTypeForDate(targetDate) {
-        const targetThursday = new Date(targetDate);
-        targetThursday.setDate(targetThursday.getDate() - (targetThursday.getDay() - 4 + 7) % 7);
-        const startThursday = new Date(SHIFT_START_DATE);
-        const diffWeeks = Math.round((targetThursday - startThursday.setHours(0,0,0,0)) / (1000 * 60 * 60 * 24 * 7));
-        return (diffWeeks % 2 + 2) % 2 === 1 ? (START_WEEK_SHIFT === 'DAY' ? 'NIGHT' : 'DAY') : START_WEEK_SHIFT;
+        const targetThursday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        const dayOffset = (targetThursday.getDay() - 4 + 7) % 7;
+        targetThursday.setDate(targetThursday.getDate() - dayOffset);
+
+        const startThursday = new Date(SHIFT_START_DATE.getFullYear(), SHIFT_START_DATE.getMonth(), SHIFT_START_DATE.getDate());
+
+        const diffWeeks = Math.round((targetThursday.getTime() - startThursday.getTime()) / (1000 * 60 * 60 * 24 * 7));
+        const isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
+
+        return START_WEEK_SHIFT === 'DAY' ? (isFlipped ? 'NIGHT' : 'DAY') : (isFlipped ? 'DAY' : 'NIGHT');
     }
 
     function renderCalendar(date) {
@@ -275,3 +271,5 @@
                     badge.classList.add('shift-day'); badge.textContent = '오전'; 
                 }
                 else {
+                    const currentWeekShift = getShiftTypeForDate(thisDate);
+
