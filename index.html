@@ -141,7 +141,7 @@
 <div class="calendar-container">
     <div class="calendar-header">
         <button id="prevBtn">&lt;</button>
-        <h2 id="monthYearTitle"></h2>
+        <h2 id="monthYearTitle">근무 달력</h2>
         <button id="nextBtn">&gt;</button>
     </div>
     <div class="days-grid">
@@ -150,7 +150,7 @@
     <div class="dates-grid" id="datesGrid"></div>
     
     <div class="info-panel">
-        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">이번 달 휴무: 계산 중...</div>
+        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">달력 데이터를 불러오는 중입니다...</div>
         <div>💡 규칙: 3개월마다 휴무 자동 당겨짐 / 일주일마다 오전 오후 교대</div>
         <div class="legend">
             <span class="shift-badge shift-day">오전 오전근무</span>
@@ -162,29 +162,29 @@
 </div>
 
 <script>
-    const monthYearTitle = document.getElementById('monthYearTitle');
-    const datesGrid = document.getElementById('datesGrid');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const currentRuleText = document.getElementById('currentRuleText');
+    var monthYearTitle = document.getElementById("monthYearTitle");
+    var datesGrid = document.getElementById("datesGrid");
+    var prevBtn = document.getElementById("prevBtn");
+    var nextBtn = document.getElementById("nextBtn");
+    var currentRuleText = document.getElementById("currentRuleText");
 
-    let currentDate = new Date();
+    var currentDate = new Date();
 
-    const BASE_YEAR = 2026;
-    const BASE_MONTH = 7; 
+    var BASE_YEAR = 2026;
+    var BASE_MONTH = 7; 
 
-    const SHIFT_START_DATE = new Date(2026, 7, 6, 0, 0, 0, 0);
-    const START_WEEK_SHIFT = "DAY"; 
+    var SHIFT_START_DATE = new Date(2026, 7, 6, 0, 0, 0, 0);
+    var START_WEEK_SHIFT = "DAY"; 
 
-    const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+    var DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
-    const PUBLIC_HOLIDAYS = {
+    var PUBLIC_HOLIDAYS = {
         "2026-08-15": true, "2026-08-17": true, "2026-09-24": true,
         "2026-09-25": true, "2026-09-26": true, "2026-10-03": true,
         "2026-10-05": true, "2026-10-09": true, "2026-12-25": true
     };
 
-    const REGIONAL_EVENTS = {
+    var REGIONAL_EVENTS = {
         "2026-08-21": "빅뱅 콘서트(종합운동장)",
         "2026-08-22": "빅뱅 콘서트(종합운동장)",
         "2026-08-23": "빅뱅 콘서트(종합운동장)",
@@ -201,8 +201,8 @@
     };
 
     function getOffDaysForMonth(year, month) {
-        const elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
-        let period = 0;
+        var elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
+        var period = 0;
         if (elapsedMonths >= 0) {
             if (elapsedMonths <= 1) { period = 0; } 
             else if (elapsedMonths <= 4) { period = 1; } 
@@ -210,61 +210,61 @@
         } else {
             period = Math.floor(elapsedMonths / 3);
         }
-        let day1 = (2 - period) % 7; let day2 = (3 - period) % 7;
+        var day1 = (2 - period) % 7; var day2 = (3 - period) % 7;
         return [day1 < 0 ? day1 + 7 : day1, day2 < 0 ? day2 + 7 : day2];
     }
 
     function getShiftTypeForDate(targetDate) {
-        const tThursday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
-        const tDayOffset = (tThursday.getDay() - 4 + 7) % 7;
+        var tThursday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
+        var tDayOffset = (tThursday.getDay() - 4 + 7) % 7;
         tThursday.setDate(tThursday.getDate() - tDayOffset);
 
-        const sThursday = new Date(SHIFT_START_DATE.getFullYear(), SHIFT_START_DATE.getMonth(), SHIFT_START_DATE.getDate(), 0, 0, 0, 0);
+        var sThursday = new Date(SHIFT_START_DATE.getFullYear(), SHIFT_START_DATE.getMonth(), SHIFT_START_DATE.getDate(), 0, 0, 0, 0);
 
-        const diffTime = tThursday.getTime() - sThursday.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        const diffWeeks = Math.round(diffDays / 7);
+        var diffTime = tThursday.getTime() - sThursday.getTime();
+        var diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        var diffWeeks = Math.round(diffDays / 7);
         
-        const isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
+        var isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
         return START_WEEK_SHIFT === "DAY" ? (isFlipped ? "NIGHT" : "DAY") : (isFlipped ? "DAY" : "NIGHT");
     }
 
     function renderCalendar(date) {
-        const year = date.getFullYear(); const month = date.getMonth();
-        monthYearTitle.textContent = String(year) + "년 " + String(month + 1) + "월";
+        try {
+            var year = date.getFullYear(); var month = date.getMonth();
+            monthYearTitle.textContent = String(year) + "년 " + String(month + 1) + "월";
 
-        const [offDay1, offDay2] = getOffDaysForMonth(year, month);
-        currentRuleText.textContent = "📅 이 달의 휴무: 매주 [" + DAY_NAMES[offDay1] + ", " + DAY_NAMES[offDay2] + "]요일";
-        
-        const firstDayIndex = new Date(year, month, 1).getDay();
-        const lastDate = new Date(year, month + 1, 0).getDate();
+            var offDays = getOffDaysForMonth(year, month);
+            var offDay1 = offDays[0]; var offDay2 = offDays[1];
+            currentRuleText.textContent = "📅 이 달의 휴무: 매주 [" + DAY_NAMES[offDay1] + ", " + DAY_NAMES[offDay2] + "]요일";
+            
+            var firstDayIndex = new Date(year, month, 1).getDay();
+            var lastDate = new Date(year, month + 1, 0).getDate();
 
-        datesGrid.innerHTML = "";
-        for (let i = 0; i < firstDayIndex; i++) {
-            const emptyCell = document.createElement("div"); emptyCell.classList.add("date-cell", "empty"); datesGrid.appendChild(emptyCell);
-        }
-
-        const today = new Date();
-        for (let day = 1; day <= lastDate; day++) {
-            const dateCell = document.createElement("div"); dateCell.classList.add("date-cell");
-            const numDiv = document.createElement("div"); numDiv.classList.add("date-num"); numDiv.textContent = day; dateCell.appendChild(numDiv);
-
-            const thisDate = new Date(year, month, day); const currentDayOfWeek = thisDate.getDay();
-            const badge = document.createElement("span"); badge.classList.add("shift-badge");
-
-            const dateString = String(year) + "-" + String(month + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
-
-            if (PUBLIC_HOLIDAYS[dateString]) {
-                dateCell.classList.add("public-holiday");
+            datesGrid.innerHTML = "";
+            for (var i = 0; i < firstDayIndex; i++) {
+                var emptyCell = document.createElement("div"); emptyCell.classList.add("date-cell", "empty"); datesGrid.appendChild(emptyCell);
             }
 
-            if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
-                dateCell.classList.add("off-day-bg"); badge.classList.add("shift-off"); badge.textContent = "휴무";
-            } else {
-                if (year === 2026 && month === 7 && (day === 1 || day === 2 || day === 3)) { 
-                    badge.classList.add("shift-night"); badge.textContent = "오후"; 
-                } 
-                else if (year === 2026 && month === 7 && (day >= 6 && day <= 10)) { 
-                    badge.classList.add("shift-day"); badge.textContent = "오전"; 
+            var today = new Date();
+            for (var day = 1; day <= lastDate; day++) {
+                var dateCell = document.createElement("div"); dateCell.classList.add("date-cell");
+                var numDiv = document.createElement("div"); numDiv.classList.add("date-num"); numDiv.textContent = day; dateCell.appendChild(numDiv);
+
+                var thisDate = new Date(year, month, day); var currentDayOfWeek = thisDate.getDay();
+                var badge = document.createElement("span"); badge.classList.add("shift-badge");
+
+                // 구형 모바일 호환용 수동 두자리 패딩 처리 문법
+                var mm = String(month + 1); if (mm.length < 2) mm = "0" + mm;
+                var dd = String(day); if (dd.length < 2) dd = "0" + dd;
+                var dateString = String(year) + "-" + mm + "-" + dd;
+
+                if (PUBLIC_HOLIDAYS[dateString]) {
+                    dateCell.classList.add("public-holiday");
                 }
-                else {
+
+                if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
+                    dateCell.classList.add("off-day-bg"); badge.classList.add("shift-off"); badge.textContent = "휴무";
+                } else {
+                    if (year === 2026 && month === 7 && (day === 1 || day === 2 || day === 3)) { 
+                        badge.classList.add("shift-night"); badge.textContent = "오후"; 
