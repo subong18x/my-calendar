@@ -21,8 +21,10 @@
             border: 1px solid #d0d7de;
             border-radius: 6px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-            width: 440px;
+            width: 100%;
+            max-width: 440px;
             padding: 20px;
+            box-sizing: border-box;
         }
         .calendar-header {
             display: flex;
@@ -176,7 +178,8 @@
     const BASE_YEAR = 2026;
     const BASE_MONTH = 7; // 8월
 
-    const SHIFT_START_DATE = new Date(2026, 7, 6);
+    // 오전/오후 교대 연동을 위한 기준날짜 고정 (2026년 8월 6일 목요일 = 오전 시작 주차)
+    const SHIFT_START_DATE = new Date(2026, 7, 6, 0, 0, 0, 0);
     const START_WEEK_SHIFT = 'DAY'; 
 
     const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -188,7 +191,7 @@
         '2026-10-05': true, '2026-10-09': true, '2026-12-25': true
     };
 
-    // 콘서트 스케줄 (As of August 2026)
+    // 콘서트 스케줄 데이터 (As of August 2026)
     const REGIONAL_EVENTS = {
         '2026-08-21': '빅뱅 콘서트(종합운동장)',
         '2026-08-22': '빅뱅 콘서트(종합운동장)',
@@ -219,17 +222,19 @@
         return [day1 < 0 ? day1 + 7 : day1, day2 < 0 ? day2 + 7 : day2];
     }
 
-    // [버그 수정 구문] 타임스탬프 밀림 현상 방지를 위해 setHours 로직 전면 재수정
+    // 타임존 에러 완벽 해결: 시/분/초 오차를 없애고 주차 차이를 일수 기반으로 계산
     function getShiftTypeForDate(targetDate) {
-        const targetThursday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-        const dayOffset = (targetThursday.getDay() - 4 + 7) % 7;
-        targetThursday.setDate(targetThursday.getDate() - dayOffset);
+        const tThursday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
+        const tDayOffset = (tThursday.getDay() - 4 + 7) % 7;
+        tThursday.setDate(tThursday.getDate() - tDayOffset);
 
-        const startThursday = new Date(SHIFT_START_DATE.getFullYear(), SHIFT_START_DATE.getMonth(), SHIFT_START_DATE.getDate());
+        const sThursday = new Date(SHIFT_START_DATE.getFullYear(), SHIFT_START_DATE.getMonth(), SHIFT_START_DATE.getDate(), 0, 0, 0, 0);
 
-        const diffWeeks = Math.round((targetThursday.getTime() - startThursday.getTime()) / (1000 * 60 * 60 * 24 * 7));
+        const diffTime = tThursday.getTime() - sThursday.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.round(diffDays / 7);
+        
         const isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
-
         return START_WEEK_SHIFT === 'DAY' ? (isFlipped ? 'NIGHT' : 'DAY') : (isFlipped ? 'DAY' : 'NIGHT');
     }
 
@@ -268,8 +273,3 @@
                     badge.classList.add('shift-night'); badge.textContent = '오후'; 
                 } 
                 else if (year === 2026 && month === 7 && (day >= 6 && day <= 10)) { 
-                    badge.classList.add('shift-day'); badge.textContent = '오전'; 
-                }
-                else {
-                    const currentWeekShift = getShiftTypeForDate(thisDate);
-
