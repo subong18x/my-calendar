@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주야 교대 근무 달력</title>
+    <style>
+        body {
+            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f6f8fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .calendar-container {
+            background: #ffffff;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            width: 380px;
+            padding: 20px;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .calendar-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #24292f;
+        }
+        .calendar-header button {
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .calendar-header button:hover {
+            background-color: #f3f4f6;
+        }
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 600;
+            color: #57606a;
+            margin-bottom: 10px;
+        }
+        .dates-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            row-gap: 14px;
+        }
+        .date-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 0;
+            color: #24292f;
+            border-radius: 6px;
+            font-weight: 500;
+            min-height: 48px;
+        }
+        .date-num {
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .shift-badge {
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        .shift-day { background-color: #fff8c5; color: #9a6700; } /* 주간 */
+        .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 야간 */
+        .shift-off { background-color: #ffebe9; color: #cf222e; } /* 휴무 */
+
+        .date-cell.off-day-bg {
+            background-color: #ffebe9;
+        }
+        .date-cell.off-day-bg .date-num {
+            color: #cf222e;
+            font-weight: bold;
+        }
+        .date-cell.today {
+            border: 2px solid #2da44e;
+            box-sizing: border-box;
+        }
+        .date-cell.empty {
+            cursor: default;
+        }
+        .info-panel {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #57606a;
+            line-height: 1.6;
+            border-top: 1px solid #d0d7de;
+            padding-top: 12px;
+        }
+        .legend {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calendar-container">
+    <div class="calendar-header">
+        <button id="prevBtn">&lt;</button>
+        <h2 id="monthYearTitle"></h2>
+        <button id="nextBtn">&gt;</button>
+    </div>
+    <div class="days-grid">
+        <div style="color: #cf222e;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color: #0969da;">토</div>
+    </div>
+    <div class="dates-grid" id="datesGrid"></div>
+    
+    <div class="info-panel">
+        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">이번 달 휴무: 계산 중...</div>
+        <div>💡 규칙: 3개월마다 휴무 요일 변동 / 일주일마다 주야 교대</div>
+        <div class="legend">
+            <span class="shift-badge shift-day">주 주간근무</span>
+            <span class="shift-badge shift-night">야 야간근무</span>
+            <span class="shift-badge shift-off">휴 휴무일</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const monthYearTitle = document.getElementById('monthYearTitle');
+    const datesGrid = document.getElementById('datesGrid');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const currentRuleText = document.getElementById('currentRuleText');
+
+    let currentDate = new Date();
+
+    // ─────────────────────────────────────────────────────────
+    // ⚙️ [정밀 세팅 완료] 제공해주신 스케줄을 기준으로 동기화했습니다.
+    // ─────────────────────────────────────────────────────────
+    // 1) 2026년 8월 = 화(2), 수(3) 휴무 기준점
+    const BASE_YEAR = 2026;
+    const BASE_MONTH = 7; // 8월 (0부터 시작하므로 7이 8월)
+
+    // 2) 알려주신 8월 9일 주차가 야간(NIGHT) 주간임을 명시하여 자동 교대 기준 설정
+    const SHIFT_START_DATE = new Date(2026, 7, 9); // 2026년 8월 9일 (일요일)
+    const START_WEEK_SHIFT = 'NIGHT'; 
+    // ─────────────────────────────────────────────────────────
+
+    const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+    // 1. 해당 월의 휴무 요일 계산 (3개월마다 당겨짐)
+    function getOffDaysForMonth(year, month) {
+        const elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
+        const period = Math.floor(elapsedMonths / 3);
+        
+        let day1 = (2 - period) % 7;
+        let day2 = (3 - period) % 7;
+        
+        if (day1 < 0) day1 += 7;
+        if (day2 < 0) day2 += 7;
+        
+        return [day1, day2];
+    }
+
+    // 2. 특정 날짜가 속한 주(Week)가 주간 주인지 야간 주인지 계산 (7일 단위 순환)
+    function getShiftTypeForDate(targetDate) {
+        const targetSunday = new Date(targetDate);
+        targetSunday.setDate(targetDate.getDate() - targetDate.getDay());
+        targetSunday.setHours(0,0,0,0);
+
+        const startSunday = new Date(SHIFT_START_DATE);
+        startSunday.setDate(SHIFT_START_DATE.getDate() - SHIFT_START_DATE.getDay());
+        startSunday.setHours(0,0,0,0);
+
+        const diffWeeks = Math.round((targetSunday - startSunday) / (1000 * 60 * 60 * 24 * 7));
+        const isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
+
+        if (START_WEEK_SHIFT === 'DAY') {
+            return isFlipped ? 'NIGHT' : 'DAY';
+        } else {
+            return isFlipped ? 'DAY' : 'NIGHT';
+        }
+    }
+
+    function renderCalendar(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+
+        monthYearTitle.textContent = `${year}년 ${month + 1}월`;
+
+        const [offDay1, offDay2] = getOffDaysForMonth(year, month);
+        currentRuleText.textContent = `📅 이 달의 휴무: 매주 [${DAY_NAMES[offDay1]}, ${DAY_NAMES[offDay2]}]요일`;
+
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+
+        datesGrid.innerHTML = '';
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.classList.add('date-cell', 'empty');
+            datesGrid.appendChild(emptyCell);
+        }
+
+        const today = new Date();
+
+        for (let day = 1; day <= lastDate; day++) {
+            const dateCell = document.createElement('div');
+            dateCell.classList.add('date-cell');
+            
+            const numDiv = document.createElement('div');
+            numDiv.classList.add('date-num');
+            numDiv.textContent = day;
+            dateCell.appendChild(numDiv);
+
+            const thisDate = new Date(year, month, day);
+            const currentDayOfWeek = thisDate.getDay();
+            const badge = document.createElement('span');
+            badge.classList.add('shift-badge');
+
+            // 1. 휴무일 검사
+            if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
+                dateCell.classList.add('off-day-bg');
+                badge.classList.add('shift-off');
+                badge.textContent = '휴';
+            } else {
+                // 2. 주간/야간 주차 검사 (일주일 단위)
+                const currentWeekShift = getShiftTypeForDate(thisDate);
+                if (currentWeekShift === 'DAY') {
+                    badge.classList.add('shift-day');
+                    badge.textContent = '주';
+                } else {
+                    badge.classList.add('shift-night');
+                    badge.textContent = '야';
+                }
+            }
+
+            dateCell.appendChild(badge);
+
+            if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                dateCell.classList.add('today');
+            }
+
+            datesGrid.appendChild(dateCell);
+        }
+    }
+
+    prevBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar(currentDate);
+    });
+
+    nextBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar(currentDate);
+    });
+
+    renderCalendar(currentDate);
+</script>
+</body>
+</html>
