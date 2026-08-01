@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주야 교대 근무 달력</title>
+    <title>내 교대 근무 달력</title>
     <style>
         body {
             font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -26,6 +26,7 @@
         }
         .calendar-header {
             display: flex;
+            justify- nudge-between;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
@@ -148,14 +149,14 @@
     let currentDate = new Date();
 
     // ─────────────────────────────────────────────────────────
-    // ⚙️ [정밀 세팅 완료] 제공해주신 스케줄을 기준으로 동기화했습니다.
+    // ⚙️ [정밀 세팅] 말씀해주신 8월 스케줄에 맞춰 기준점을 완전 일치시켰습니다.
     // ─────────────────────────────────────────────────────────
     // 1) 2026년 8월 = 화(2), 수(3) 휴무 기준점
     const BASE_YEAR = 2026;
     const BASE_MONTH = 7; // 8월 (0부터 시작하므로 7이 8월)
 
-    // 2) 알려주신 8월 9일 주차가 야간(NIGHT) 주간임을 명시하여 자동 교대 기준 설정
-    const SHIFT_START_DATE = new Date(2026, 7, 9); // 2026년 8월 9일 (일요일)
+    // 2) 7월 26일 일요일 주차가 야간(NIGHT) 주간이어야 8월 1~3일이 야간이 됩니다.
+    const SHIFT_START_DATE = new Date(2026, 6, 26); // 2026년 7월 26일 (일요일)
     const START_WEEK_SHIFT = 'NIGHT'; 
     // ─────────────────────────────────────────────────────────
 
