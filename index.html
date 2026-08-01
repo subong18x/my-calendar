@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 근무 & 고양/킨텍스 행사 & 공휴일 달력</title>
+    <title>내 근무 & 고양/킨텍스 콘서트 달력</title>
     <style>
         body {
             font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -21,7 +21,7 @@
             border: 1px solid #d0d7de;
             border-radius: 6px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-            width: 450px;
+            width: 440px; /* 콘서트 텍스트 출력을 위해 가로폭을 최적화했습니다 */
             padding: 20px;
         }
         .calendar-header {
@@ -69,7 +69,7 @@
             color: #24292f;
             border-radius: 6px;
             font-weight: 500;
-            min-height: 85px; /* 공휴일 텍스트를 고려해 높이를 소폭 확장했습니다 */
+            min-height: 80px; /* 콘서트 이름 공간을 위해 세로폭을 충분히 잡았습니다 */
             vertical-align: top;
         }
         .date-num {
@@ -77,7 +77,7 @@
             margin-bottom: 4px;
         }
         
-        /* 🔴 법정 공휴일 전용 숫자 붉은색 스타일 */
+        /* 🔴 법정 공휴일 숫자 스타일 */
         .date-cell.public-holiday .date-num {
             color: #cf222e !important;
             font-weight: bold;
@@ -90,16 +90,25 @@
             border-radius: 3px;
             margin-bottom: 3px;
         }
-        .shift-day { background-color: #fff8c5; color: #9a6700; }
-        .shift-night { background-color: #f2e6ff; color: #6f30a0; }
-        .shift-off { background-color: #ffebe9; color: #cf222e; }
+        .shift-day { background-color: #fff8c5; color: #9a6700; } /* 오전 */
+        .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 오후 */
+        
+        /* 🔵 파란색 휴무일 스타일 */
+        .shift-off { background-color: #ddf4ff; color: #0969da; }
+        .date-cell.off-day-bg {
+            background-color: #f0f8ff;
+        }
+        .date-cell.off-day-bg .date-num {
+            color: #0969da;
+            font-weight: bold;
+        }
 
-        /* 텍스트 디자인 구분 (행사 vs 공휴일) */
+        /* 🎵 콘서트/행사 텍스트 스타일 */
         .event-text {
             font-size: 0.55rem;
             line-height: 1.2;
             color: #ffffff;
-            background-color: #0969da; /* 일반 행사 파란색 */
+            background-color: #8a3ffc; /* 콘서트는 세련된 보라색 상자로 표시 */
             border-radius: 3px;
             padding: 1px 2px;
             width: 92%;
@@ -109,18 +118,14 @@
             margin-top: 2px;
             text-align: center;
         }
-        .event-text.concert {
-            background-color: #8a3ffc; /* 콘서트는 보라색 */
-        }
-        .event-text.holiday-label {
-            background-color: #cf222e; /* 공휴일 이름 표시는 빨간색 */
-            font-weight: bold;
-        }
 
-        .date-cell.off-day-bg { background-color: #ffebe9; }
-        .date-cell.off-day-bg .date-num { color: #cf222e; font-weight: bold; }
-        .date-cell.today { border: 2px solid #2da44e; box-sizing: border-box; }
-        .date-cell.empty { cursor: default; }
+        .date-cell.today {
+            border: 2px solid #2da44e;
+            box-sizing: border-box;
+        }
+        .date-cell.empty {
+            cursor: default;
+        }
         .info-panel {
             margin-top: 15px;
             font-size: 0.85rem;
@@ -129,7 +134,12 @@
             border-top: 1px solid #d0d7de;
             padding-top: 12px;
         }
-        .legend { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+        .legend {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
@@ -147,12 +157,12 @@
     
     <div class="info-panel">
         <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">이번 달 휴무: 계산 중...</div>
-        <div>💡 규칙: 3개월마다 휴무 변동 / 킨텍스·고양종합운동장 및 공휴일 연동</div>
+        <div>💡 규칙: 3개월마다 휴무 자동 당겨짐 / 일주일마다 오전 오후 교대</div>
         <div class="legend">
-            <span class="shift-badge shift-day">주 주간</span>
-            <span class="shift-badge shift-night">야 야간</span>
-            <span class="shift-badge shift-off">휴 휴무</span>
-            <span style="font-size: 0.75rem; color: #cf222e; font-weight: bold;">■ 빨간날 자동 표기됨</span>
+            <span class="shift-badge shift-day">오전 오전근무</span>
+            <span class="shift-badge shift-night">오후 오후근무</span>
+            <span class="shift-badge shift-off">휴무 휴무일</span>
+            <span style="font-size: 0.75rem; color: #8a3ffc; font-weight: bold;">■ 고양/킨텍스 콘서트 연동</span>
         </div>
     </div>
 </div>
@@ -166,53 +176,55 @@
 
     let currentDate = new Date();
 
-    const BASE_YEAR = 2026; const BASE_MONTH = 7;
-    const SHIFT_START_DATE = new Date(2026, 7, 6); const START_WEEK_SHIFT = 'DAY';
+    const BASE_YEAR = 2026;
+    const BASE_MONTH = 7; // 8월
+
+    const SHIFT_START_DATE = new Date(2026, 7, 6);
+    const START_WEEK_SHIFT = 'DAY'; 
+
     const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
-    // ─────────────────────────────────────────────────────────
-    // 🇰🇷 [2026년 하반기 대한민국 법정 공휴일 데이터 저장소]
-    // ─────────────────────────────────────────────────────────
+    // 🇰🇷 대한민국 법정 공휴일 데이터
     const PUBLIC_HOLIDAYS = {
-        '2026-08-15': '광복절',
-        '2026-08-17': '대체공휴일(광복절)',
-        '2026-09-24': '추석 연휴',
-        '2026-09-25': '추석',
-        '2026-09-26': '추석 연휴',
-        '2026-10-03': '개천절',
-        '2026-10-05': '대체공휴일(개천절)',
-        '2026-10-09': '한글날',
-        '2026-12-25': '성탄절'
+        '2026-08-15': true, '2026-08-17': true, '2026-09-24': true,
+        '2026-09-25': true, '2026-09-26': true, '2026-10-03': true,
+        '2026-10-05': true, '2026-10-09': true, '2026-12-25': true
     };
 
-    // 🏛️ 고양시 대형 행사 일정 데이터
+    // 🏛️ 고양종합운동장 및 킨텍스 대형 공연/콘서트 핵심 데이터 연동
     const REGIONAL_EVENTS = {
-        '2026-08-06': { name: '코베 베이비페어(킨텍스)', type: 'expo' },
-        '2026-08-07': { name: '코베 베이비페어(킨텍스)', type: 'expo' },
-        '2026-08-08': { name: '코베 베이비페어(킨텍스)', type: 'expo' },
-        '2026-08-09': { name: '코베 베이비페어(킨텍스)', type: 'expo' },
-        '2026-08-13': { name: '동아 가구엑스포(킨텍스)', type: 'expo' },
-        '2026-08-14': { name: '동아 가구엑스포(킨텍스)', type: 'expo' },
-        '2026-08-15': { name: '동아 가구엑스포(킨텍스)', type: 'expo' },
-        '2026-08-16': { name: '동아 가구엑스포(킨텍스)', type: 'expo' },
-        '2026-08-21': { name: '빅뱅 콘서트(종합운동장)', type: 'concert' },
-        '2026-08-22': { name: '빅뱅 콘서트(종합운동장)', type: 'concert' },
-        '2026-08-23': { name: '빅뱅 콘서트(종합운동장)', type: 'concert' },
-        '2026-09-04': { name: '임영웅 콘서트(종합운동장)', type: 'concert' },
-        '2026-09-05': { name: '임영웅 콘서트(종합운동장)', type: 'concert' },
-        '2026-09-06': { name: '임영웅 콘서트(종합운동장)', type: 'concert' },
-        '2026-10-02': { name: '포스트말론 공연(종합운동장)', type: 'concert' },
-        '2026-10-08': { name: '더위켄드 공연(종합운동장)', type: 'concert' },
-        '2026-10-11': { name: '찰리푸스 콘서트(종합운동장)', type: 'concert' },
-        '2026-10-14': { name: '한국산업대전(킨텍스)', type: 'expo' },
-        '2026-10-15': { name: '한국산업대전(킨텍스)', type: 'expo' },
-        '2026-10-16': { name: '한국산업대전(킨텍스)', type: 'expo' }
+        // 8월 빅뱅 콘서트
+        '2026-08-21': '빅뱅 콘서트(종합운동장)',
+        '2026-08-22': '빅뱅 콘서트(종합운동장)',
+        '2026-08-23': '빅뱅 콘서트(종합운동장)',
+        
+        // 9월 임영웅 스타디움 단독 콘서트
+        '2026-09-04': '임영웅 콘서트(종합운동장)',
+        '2026-09-05': '임영웅 콘서트(종합운동장)',
+        '2026-09-06': '임영웅 콘서트(종합운동장)',
+        
+        // 10월 글로벌 팝스타 내한 공연 시리즈
+        '2026-10-02': '포스트말론 공연(종합운동장)',
+        '2026-10-03': '레이니 콘서트(킨텍스)',
+        '2026-10-08': '더위켄드 공연(종합운동장)',
+        '2026-10-11': '찰리푸스 콘서트(종합운동장)',
+        '2026-10-17': '놀 유니버스 페스티벌(킨텍스)',
+        
+        // 11월 감성 내한 공연 시리즈
+        '2026-11-14': '제이슨므라즈 콘서트(킨텍스)',
+        '2026-11-19': '5SOS 내한공연(킨텍스)'
     };
-    // ─────────────────────────────────────────────────────────
 
     function getOffDaysForMonth(year, month) {
         const elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
-        let period = elapsedMonths >= 0 ? (elapsedMonths <= 1 ? 0 : (elapsedMonths <= 4 ? 1 : 1 + Math.floor((elapsedMonths - 2) / 3))) : Math.floor(elapsedMonths / 3);
+        let period = 0;
+        if (elapsedMonths >= 0) {
+            if (elapsedMonths <= 1) { period = 0; } 
+            else if (elapsedMonths <= 4) { period = 1; } 
+            else { period = 1 + Math.floor((elapsedMonths - 2) / 3); }
+        } else {
+            period = Math.floor(elapsedMonths / 3);
+        }
         let day1 = (2 - period) % 7; let day2 = (3 - period) % 7;
         return [day1 < 0 ? day1 + 7 : day1, day2 < 0 ? day2 + 7 : day2];
     }
@@ -249,4 +261,17 @@
 
             const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-            // 🔴 법정 공휴일 여부 체크 스타일 적용
+            if (PUBLIC_HOLIDAYS[dateString]) {
+                dateCell.classList.add('public-holiday');
+            }
+
+            if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
+                dateCell.classList.add('off-day-bg'); badge.classList.add('shift-off'); badge.textContent = '휴무';
+            } else {
+                if (year === 2026 && month === 7 && (day === 1 || day === 2 || day === 3)) { 
+                    badge.classList.add('shift-night'); badge.textContent = '오후'; 
+                } 
+                else if (year === 2026 && month === 7 && (day >= 6 && day <= 10)) { 
+                    badge.classList.add('shift-day'); badge.textContent = '오전'; 
+                }
+                else {
