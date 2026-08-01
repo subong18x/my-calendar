@@ -174,30 +174,30 @@
     const BASE_MONTH = 7; 
 
     const SHIFT_START_DATE = new Date(2026, 7, 6, 0, 0, 0, 0);
-    const START_WEEK_SHIFT = 'DAY'; 
+    const START_WEEK_SHIFT = "DAY"; 
 
-    const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+    const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
     const PUBLIC_HOLIDAYS = {
-        '2026-08-15': true, '2026-08-17': true, '2026-09-24': true,
-        '2026-09-25': true, '2026-09-26': true, '2026-10-03': true,
-        '2026-10-05': true, '2026-10-09': true, '2026-12-25': true
+        "2026-08-15": true, "2026-08-17": true, "2026-09-24": true,
+        "2026-09-25": true, "2026-09-26": true, "2026-10-03": true,
+        "2026-10-05": true, "2026-10-09": true, "2026-12-25": true
     };
 
     const REGIONAL_EVENTS = {
-        '2026-08-21': '빅뱅 콘서트(종합운동장)',
-        '2026-08-22': '빅뱅 콘서트(종합운동장)',
-        '2026-08-23': '빅뱅 콘서트(종합운동장)',
-        '2026-09-04': '임영웅 콘서트(종합운동장)',
-        '2026-09-05': '임영웅 콘서트(종합운동장)',
-        '2026-09-06': '임영웅 콘서트(종합운동장)',
-        '2026-10-02': '포스트말론 공연(종합운동장)',
-        '2026-10-03': '레이니 콘서트(킨텍스)',
-        '2026-10-08': '더위켄드 공연(종합운동장)',
-        '2026-10-11': '찰리푸스 콘서트(종합운동장)',
-        '2026-10-17': '놀 유니버스 페스티벌(킨텍스)',
-        '2026-11-14': '제이슨므라즈 콘서트(킨텍스)',
-        '2026-11-19': '5SOS 내한공연(킨텍스)'
+        "2026-08-21": "빅뱅 콘서트(종합운동장)",
+        "2026-08-22": "빅뱅 콘서트(종합운동장)",
+        "2026-08-23": "빅뱅 콘서트(종합운동장)",
+        "2026-09-04": "임영웅 콘서트(종합운동장)",
+        "2026-09-05": "임영웅 콘서트(종합운동장)",
+        "2026-09-06": "임영웅 콘서트(종합운동장)",
+        "2026-10-02": "포스트말론 공연(종합운동장)",
+        "2026-10-03": "레이니 콘서트(킨텍스)",
+        "2026-10-08": "더위켄드 공연(종합운동장)",
+        "2026-10-11": "찰리푸스 콘서트(종합운동장)",
+        "2026-10-17": "놀 유니버스 페스티벌(킨텍스)",
+        "2026-11-14": "제이슨므라즈 콘서트(킨텍스)",
+        "2026-11-19": "5SOS 내한공연(킨텍스)"
     };
 
     function getOffDaysForMonth(year, month) {
@@ -226,44 +226,45 @@
         const diffWeeks = Math.round(diffDays / 7);
         
         const isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
-        return START_WEEK_SHIFT === 'DAY' ? (isFlipped ? 'NIGHT' : 'DAY') : (isFlipped ? 'DAY' : 'NIGHT');
+        return START_WEEK_SHIFT === "DAY" ? (isFlipped ? "NIGHT" : "DAY") : (isFlipped ? "DAY" : "NIGHT");
     }
 
     function renderCalendar(date) {
         const year = date.getFullYear(); const month = date.getMonth();
-        monthYearTitle.textContent = `${year}년 ${month + 1}월`;
+        monthYearTitle.textContent = String(year) + "년 " + String(month + 1) + "월";
 
         const [offDay1, offDay2] = getOffDaysForMonth(year, month);
-        currentRuleText.textContent = `📅 이 달의 휴무: 매주 [${DAY_NAMES[offDay1]}, ${DAY_NAMES[offDay2]}]요일`;
+        currentRuleText.textContent = "📅 이 달의 휴무: 매주 [" + DAY_NAMES[offDay1] + ", " + DAY_NAMES[offDay2] + "]요일";
+        
         const firstDayIndex = new Date(year, month, 1).getDay();
         const lastDate = new Date(year, month + 1, 0).getDate();
 
-        datesGrid.innerHTML = '';
+        datesGrid.innerHTML = "";
         for (let i = 0; i < firstDayIndex; i++) {
-            const emptyCell = document.createElement('div'); emptyCell.classList.add('date-cell', 'empty'); datesGrid.appendChild(emptyCell);
+            const emptyCell = document.createElement("div"); emptyCell.classList.add("date-cell", "empty"); datesGrid.appendChild(emptyCell);
         }
 
         const today = new Date();
         for (let day = 1; day <= lastDate; day++) {
-            const dateCell = document.createElement('div'); dateCell.classList.add('date-cell');
-            const numDiv = document.createElement('div'); numDiv.classList.add('date-num'); numDiv.textContent = day; dateCell.appendChild(numDiv);
+            const dateCell = document.createElement("div"); dateCell.classList.add("date-cell");
+            const numDiv = document.createElement("div"); numDiv.classList.add("date-num"); numDiv.textContent = day; dateCell.appendChild(numDiv);
 
             const thisDate = new Date(year, month, day); const currentDayOfWeek = thisDate.getDay();
-            const badge = document.createElement('span'); badge.classList.add('shift-badge');
+            const badge = document.createElement("span"); badge.classList.add("shift-badge");
 
-            const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dateString = String(year) + "-" + String(month + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
 
             if (PUBLIC_HOLIDAYS[dateString]) {
-                dateCell.classList.add('public-holiday');
+                dateCell.classList.add("public-holiday");
             }
 
             if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
-                dateCell.classList.add('off-day-bg'); badge.classList.add('shift-off'); badge.textContent = '휴무';
+                dateCell.classList.add("off-day-bg"); badge.classList.add("shift-off"); badge.textContent = "휴무";
             } else {
                 if (year === 2026 && month === 7 && (day === 1 || day === 2 || day === 3)) { 
-                    badge.classList.add('shift-night'); badge.textContent = '오후'; 
+                    badge.classList.add("shift-night"); badge.textContent = "오후"; 
                 } 
                 else if (year === 2026 && month === 7 && (day >= 6 && day <= 10)) { 
-                    badge.classList.add('shift-day'); badge.textContent = '오전'; 
+                    badge.classList.add("shift-day"); badge.textContent = "오전"; 
                 }
                 else {
