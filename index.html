@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 근무 달력</title>
+    <title>내 교대 근무 달력</title>
     <style>
         body {
             font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -22,7 +22,7 @@
             border-radius: 6px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.05);
             width: 100%;
-            max-width: 440px;
+            max-width: 380px;
             padding: 20px;
             box-sizing: border-box;
         }
@@ -66,52 +66,33 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             padding: 6px 0;
             color: #24292f;
             border-radius: 6px;
             font-weight: 500;
-            min-height: 80px;
-            vertical-align: top;
+            min-height: 52px;
         }
         .date-num {
             font-size: 1rem;
             margin-bottom: 4px;
-        }
-        .date-cell.public-holiday .date-num {
-            color: #cf222e !important;
-            font-weight: bold;
         }
         .shift-badge {
             font-size: 0.7rem;
             font-weight: bold;
             padding: 1px 5px;
             border-radius: 3px;
-            margin-bottom: 3px;
         }
-        .shift-day { background-color: #fff8c5; color: #9a6700; }
-        .shift-night { background-color: #f2e6ff; color: #6f30a0; }
-        .shift-off { background-color: #ddf4ff; color: #0969da; }
+        .shift-day { background-color: #fff8c5; color: #9a6700; } /* 오전 */
+        .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 오후 */
+        .shift-off { background-color: #ddf4ff; color: #0969da; } /* 휴무 */
+        
         .date-cell.off-day-bg {
-            background-color: #f0f8ff;
+            background-color: #f0f8ff !important;
         }
         .date-cell.off-day-bg .date-num {
-            color: #0969da;
+            color: #0969da !important;
             font-weight: bold;
-        }
-        .event-text {
-            font-size: 0.55rem;
-            line-height: 1.2;
-            color: #ffffff;
-            background-color: #8a3ffc;
-            border-radius: 3px;
-            padding: 1px 2px;
-            width: 92%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-top: 2px;
-            text-align: center;
         }
         .date-cell.today {
             border: 2px solid #2da44e;
@@ -132,7 +113,6 @@
             display: flex;
             gap: 10px;
             margin-top: 5px;
-            flex-wrap: wrap;
         }
     </style>
 </head>
@@ -150,13 +130,12 @@
     <div class="dates-grid" id="datesGrid"></div>
     
     <div class="info-panel">
-        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">달력 데이터를 불러오는 중입니다...</div>
+        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">달력을 생성하는 중...</div>
         <div>💡 규칙: 3개월마다 휴무 자동 당겨짐 / 일주일마다 오전 오후 교대</div>
         <div class="legend">
             <span class="shift-badge shift-day">오전 오전근무</span>
             <span class="shift-badge shift-night">오후 오후근무</span>
             <span class="shift-badge shift-off">휴무 휴무일</span>
-            <span style="font-size: 0.75rem; color: #8a3ffc; font-weight: bold;">■ 고양/킨텍스 콘서트 연동</span>
         </div>
     </div>
 </div>
@@ -170,101 +149,111 @@
 
     var currentDate = new Date();
 
+    // 데이터 연동 기준점 고정 수치
     var BASE_YEAR = 2026;
     var BASE_MONTH = 7; 
 
-    var SHIFT_START_DATE = new Date(2026, 7, 6, 0, 0, 0, 0);
-    var START_WEEK_SHIFT = "DAY"; 
-
     var DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
-    var PUBLIC_HOLIDAYS = {
-        "2026-08-15": true, "2026-08-17": true, "2026-09-24": true,
-        "2026-09-25": true, "2026-09-26": true, "2026-10-03": true,
-        "2026-10-05": true, "2026-10-09": true, "2026-12-25": true
+    // 3개월마다 휴무가 당겨지는 수동 매핑 데이터 (수식 버그 원천 차단)
+    var MONTHLY_OFF_MAP = {
+        "2026-6":, "2026-7":, "2026-8":, // 7, 8, 9월 화수 휴무
+        "2026-9":, "2026-10":, "2026-11":, // 10, 11, 12월 월화 휴무
+        "2026-12":, "2027-0":, "2027-1": [0, 1]   // 1, 2, 3월 일월 휴무
     };
 
-    var REGIONAL_EVENTS = {
-        "2026-08-21": "빅뱅 콘서트(종합운동장)",
-        "2026-08-22": "빅뱅 콘서트(종합운동장)",
-        "2026-08-23": "빅뱅 콘서트(종합운동장)",
-        "2026-09-04": "임영웅 콘서트(종합운동장)",
-        "2026-09-05": "임영웅 콘서트(종합운동장)",
-        "2026-09-06": "임영웅 콘서트(종합운동장)",
-        "2026-10-02": "포스트말론 공연(종합운동장)",
-        "2026-10-03": "레이니 콘서트(킨텍스)",
-        "2026-10-08": "더위켄드 공연(종합운동장)",
-        "2026-10-11": "찰리푸스 콘서트(종합운동장)",
-        "2026-10-17": "놀 유니버스 페스티벌(킨텍스)",
-        "2026-11-14": "제이슨므라즈 콘서트(킨텍스)",
-        "2026-11-19": "5SOS 내한공연(킨텍스)"
-    };
-
-    function getOffDaysForMonth(year, month) {
-        var elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
-        var period = 0;
-        if (elapsedMonths >= 0) {
-            if (elapsedMonths <= 1) { period = 0; } 
-            else if (elapsedMonths <= 4) { period = 1; } 
-            else { period = 1 + Math.floor((elapsedMonths - 2) / 3); }
-        } else {
-            period = Math.floor(elapsedMonths / 3);
+    // 타임존 오작동이 없는 초창기 일수 계산 기반의 주야 확인 시스템
+    function getSimpleShift(year, month, day) {
+        if (year === 2026 && month === 7) {
+            if (day >= 1 && day <= 3) return "NIGHT";
+            if (day >= 6 && day <= 10) return "DAY";
         }
-        var day1 = (2 - period) % 7; var day2 = (3 - period) % 7;
-        return [day1 < 0 ? day1 + 7 : day1, day2 < 0 ? day2 + 7 : day2];
-    }
-
-    function getShiftTypeForDate(targetDate) {
-        var tThursday = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
-        var tDayOffset = (tThursday.getDay() - 4 + 7) % 7;
-        tThursday.setDate(tThursday.getDate() - tDayOffset);
-
-        var sThursday = new Date(SHIFT_START_DATE.getFullYear(), SHIFT_START_DATE.getMonth(), SHIFT_START_DATE.getDate(), 0, 0, 0, 0);
-
-        var diffTime = tThursday.getTime() - sThursday.getTime();
-        var diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        var diffWeeks = Math.round(diffDays / 7);
         
-        var isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
-        return START_WEEK_SHIFT === "DAY" ? (isFlipped ? "NIGHT" : "DAY") : (isFlipped ? "DAY" : "NIGHT");
+        var targetTime = new Date(year, month, day, 12, 0, 0).getTime();
+        var baseTime = new Date(2026, 7, 6, 12, 0, 0).getTime();
+        
+        var diffDays = Math.floor((targetTime - baseTime) / (1000 * 60 * 60 * 24));
+        var weekIndex = Math.floor((diffDays + 4) / 7);
+        if (diffDays < -4) {
+            weekIndex = Math.floor((diffDays + 4) / 7);
+        }
+        
+        var isNightWeek = Math.abs(weekIndex % 2) === 1;
+        return isNightWeek ? "NIGHT" : "DAY";
     }
 
     function renderCalendar(date) {
-        try {
-            var year = date.getFullYear(); var month = date.getMonth();
-            monthYearTitle.textContent = String(year) + "년 " + String(month + 1) + "월";
+        var year = date.getFullYear();
+        var month = date.getMonth();
 
-            var offDays = getOffDaysForMonth(year, month);
-            var offDay1 = offDays[0]; var offDay2 = offDays[1];
-            currentRuleText.textContent = "📅 이 달의 휴무: 매주 [" + DAY_NAMES[offDay1] + ", " + DAY_NAMES[offDay2] + "]요일";
-            
-            var firstDayIndex = new Date(year, month, 1).getDay();
-            var lastDate = new Date(year, month + 1, 0).getDate();
+        monthYearTitle.textContent = String(year) + "년 " + String(month + 1) + "월";
 
-            datesGrid.innerHTML = "";
-            for (var i = 0; i < firstDayIndex; i++) {
-                var emptyCell = document.createElement("div"); emptyCell.classList.add("date-cell", "empty"); datesGrid.appendChild(emptyCell);
+        var mapKey = String(year) + "-" + String(month);
+        var currentOffDays = MONTHLY_OFF_MAP[mapKey] ||;
+        
+        currentRuleText.textContent = "📅 이 달의 휴무: 매주 [" + DAY_NAMES[currentOffDays[0]] + ", " + DAY_NAMES[currentOffDays[1]] + "]요일";
+
+        var firstDayIndex = new Date(year, month, 1).getDay();
+        var lastDate = new Date(year, month + 1, 0).getDate();
+
+        datesGrid.innerHTML = "";
+
+        for (var i = 0; i < firstDayIndex; i++) {
+            var emptyCell = document.createElement("div");
+            emptyCell.classList.add("date-cell", "empty");
+            datesGrid.appendChild(emptyCell);
+        }
+
+        var today = new Date();
+
+        for (var day = 1; day <= lastDate; day++) {
+            var dateCell = document.createElement("div");
+            dateCell.classList.add("date-cell");
+
+            var numDiv = document.createElement("div");
+            numDiv.classList.add("date-num");
+            numDiv.textContent = day;
+            dateCell.appendChild(numDiv);
+
+            var currentDayOfWeek = new Date(year, month, day).getDay();
+            var badge = document.createElement("span");
+            badge.classList.add("shift-badge");
+
+            if (currentDayOfWeek === currentOffDays[0] || currentDayOfWeek === currentOffDays[1]) {
+                dateCell.classList.add("off-day-bg");
+                badge.classList.add("shift-off");
+                badge.textContent = "휴무";
+            } else {
+                var shiftType = getSimpleShift(year, month, day);
+                if (shiftType === "DAY") {
+                    badge.classList.add("shift-day");
+                    badge.textContent = "오전";
+                } else {
+                    badge.classList.add("shift-night");
+                    badge.textContent = "오후";
+                }
+            }
+            dateCell.appendChild(badge);
+
+            if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                dateCell.classList.add("today");
             }
 
-            var today = new Date();
-            for (var day = 1; day <= lastDate; day++) {
-                var dateCell = document.createElement("div"); dateCell.classList.add("date-cell");
-                var numDiv = document.createElement("div"); numDiv.classList.add("date-num"); numDiv.textContent = day; dateCell.appendChild(numDiv);
+            datesGrid.appendChild(dateCell);
+        }
+    }
 
-                var thisDate = new Date(year, month, day); var currentDayOfWeek = thisDate.getDay();
-                var badge = document.createElement("span"); badge.classList.add("shift-badge");
+    prevBtn.addEventListener("click", function() {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar(currentDate);
+    });
 
-                // 구형 모바일 호환용 수동 두자리 패딩 처리 문법
-                var mm = String(month + 1); if (mm.length < 2) mm = "0" + mm;
-                var dd = String(day); if (dd.length < 2) dd = "0" + dd;
-                var dateString = String(year) + "-" + mm + "-" + dd;
+    nextBtn.addEventListener("click", function() {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar(currentDate);
+    });
 
-                if (PUBLIC_HOLIDAYS[dateString]) {
-                    dateCell.classList.add("public-holiday");
-                }
-
-                if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
-                    dateCell.classList.add("off-day-bg"); badge.classList.add("shift-off"); badge.textContent = "휴무";
-                } else {
-                    if (year === 2026 && month === 7 && (day === 1 || day === 2 || day === 3)) { 
-                        badge.classList.add("shift-night"); badge.textContent = "오후"; 
+    renderCalendar(currentDate);
+</script>
+</body>
+</html>
