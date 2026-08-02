@@ -1,282 +1,410 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 교대 근무 달력</title>
-    <style>
-        body {
-            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #f6f8fa;
-            margin: 0;
-            padding: 20px;
-        }
-        .calendar-container {
-            background: #ffffff;
-            border: 1px solid #d0d7de;
-            border-radius: 6px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-            width: 380px;
-            padding: 20px;
-        }
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .calendar-header h2 {
-            margin: 0;
-            font-size: 1.2rem;
-            color: #24292f;
-        }
-        .calendar-header button {
-            background: #f6f8fa;
-            border: 1px solid #d0d7de;
-            border-radius: 6px;
-            padding: 5px 12px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .calendar-header button:hover {
-            background-color: #f3f4f6;
-        }
-        .days-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            text-align: center;
-            font-weight: 600;
-            color: #57606a;
-            margin-bottom: 10px;
-        }
-        .dates-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            text-align: center;
-            row-gap: 14px;
-        }
-        .date-cell {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 6px 0;
-            color: #24292f;
-            border-radius: 6px;
-            font-weight: 500;
-            min-height: 48px;
-        }
-        .date-num {
-            font-size: 1rem;
-            margin-bottom: 4px;
-        }
-        .shift-badge {
-            font-size: 0.7rem;
-            font-weight: bold;
-            padding: 1px 5px;
-            border-radius: 3px;
-        }
-        .shift-day { background-color: #fff8c5; color: #9a6700; } /* 주간 */
-        .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 야간 */
-        .shift-off { background-color: #ffebe9; color: #cf222e; } /* 휴무 */
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교대근무 달력</title>
 
-        .date-cell.off-day-bg {
-            background-color: #ffebe9;
-        }
-        .date-cell.off-day-bg .date-num {
-            color: #cf222e;
-            font-weight: bold;
-        }
-        .date-cell.today {
-            border: 2px solid #2da44e;
-            box-sizing: border-box;
-        }
-        .date-cell.empty {
-            cursor: default;
-        }
-        .info-panel {
-            margin-top: 15px;
-            font-size: 0.85rem;
-            color: #57606a;
-            line-height: 1.6;
-            border-top: 1px solid #d0d7de;
-            padding-top: 12px;
-        }
-        .legend {
-            display: flex;
-            gap: 10px;
-            margin-top: 5px;
-        }
-    </style>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#f5f6fa;
+    padding:20px;
+}
+
+.calendar{
+    width:100%;
+    max-width:460px;
+    margin:auto;
+    background:#fff;
+    border-radius:10px;
+    box-shadow:0 5px 15px rgba(0,0,0,.1);
+    overflow:hidden;
+}
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:15px;
+    border-bottom:1px solid #eee;
+}
+
+.header button{
+    width:36px;
+    height:36px;
+    border:none;
+    background:#1976d2;
+    color:white;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:18px;
+}
+
+.header h2{
+    font-size:22px;
+}
+
+.week{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    background:#fafafa;
+    border-bottom:1px solid #eee;
+}
+
+.week div{
+    text-align:center;
+    padding:10px 0;
+    font-weight:bold;
+}
+
+.week div:first-child{
+    color:red;
+}
+
+.week div:last-child{
+    color:blue;
+}
+
+.days{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+}
+
+.day{
+    min-height:90px;
+    border:1px solid #f0f0f0;
+    padding:4px;
+    position:relative;
+}
+
+.number{
+    font-weight:bold;
+    margin-bottom:4px;
+}
+
+.sun .number{
+    color:red;
+}
+
+.sat .number{
+    color:blue;
+}
+
+.today{
+    outline:3px solid #16a34a;
+}
+
+.off{
+    background:#ffeaea;
+}
+
+.badge{
+    display:block;
+    width:100%;
+    margin-top:3px;
+    border-radius:4px;
+    font-size:11px;
+    padding:2px;
+    text-align:center;
+    color:#fff;
+}
+
+.dayShift{
+    background:#f59e0b;
+}
+
+.nightShift{
+    background:#8b5cf6;
+}
+
+.offShift{
+    background:#ef4444;
+}
+
+.eventExpo{
+    background:#1976d2;
+}
+
+.eventConcert{
+    background:#9333ea;
+}
+
+.eventStadium{
+    background:#16a34a;
+}
+
+.info{
+    padding:15px;
+    border-top:1px solid #eee;
+    font-size:14px;
+    line-height:1.7;
+}
+
+@media(max-width:480px){
+.day{
+    min-height:75px;
+}
+.badge{
+    font-size:10px;
+}
+}
+</style>
 </head>
 <body>
 
-<div class="calendar-container">
-    <div class="calendar-header">
-        <button id="prevBtn">&lt;</button>
-        <h2 id="monthYearTitle"></h2>
-        <button id="nextBtn">&gt;</button>
+<div class="calendar">
+    <div class="header">
+        <button id="prev">◀</button>
+        <h2 id="title"></h2>
+        <button id="next">▶</button>
     </div>
-    <div class="days-grid">
-        <div style="color: #cf222e;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color: #0969da;">토</div>
+
+    <div class="week">
+        <div>일</div>
+        <div>월</div>
+        <div>화</div>
+        <div>수</div>
+        <div>목</div>
+        <div>금</div>
+        <div>토</div>
     </div>
-    <div class="dates-grid" id="datesGrid"></div>
-    
-    <div class="info-panel">
-        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">이번 달 휴무: 계산 중...</div>
-        <div>💡 규칙: 3개월마다 휴무 요일 변동 / 일주일마다 주야 교대</div>
-        <div class="legend">
-            <span class="shift-badge shift-day">주 주간근무</span>
-            <span class="shift-badge shift-night">야 야간근무</span>
-            <span class="shift-badge shift-off">휴 휴무일</span>
+
+    <div id="days" class="days"></div>
+
+    <div class="info">
+        <div id="rule"></div>
+        <div style="margin-top:8px;">
+            🟨 주간근무 / 🟪 야간근무 / 🟥 휴무
         </div>
     </div>
 </div>
 
 <script>
-    const monthYearTitle = document.getElementById('monthYearTitle');
-    const datesGrid = document.getElementById('datesGrid');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const currentRuleText = document.getElementById('currentRuleText');
+const title = document.getElementById("title");
+const days = document.getElementById("days");
+const rule = document.getElementById("rule");
+const prev = document.getElementById("prev");
+const next = document.getElementById("next");
 
-    let currentDate = new Date();
+let current = new Date();
 
-    // 2026년 8월 = 화(2), 수(3) 휴무 기준점
-    const BASE_YEAR = 2026;
-    const BASE_MONTH = 7; // 8월
+// 2026년 8월 3일 야간 일치를 위해 기준점 재설정
+const BASE_YEAR = 2026;
+const BASE_MONTH = 7;     // 8월(0부터 시작)
+const SHIFT_START = new Date(2026, 7, 1); // 8월 1일부터 순차 시뮬레이션 돌림
+const START_SHIFT = '야'; // 8월 초반부 주차를 야간 근무 상태로 지정
 
-    // 기준점: 8월 6일 목요일이 속한 주기부터 정확히 맞물리도록 타겟 보정
-    const SHIFT_START_DATE = new Date(2026, 7, 6);
+const DAY_NAMES = ["일","월","화","수","목","금","토"];
 
-    const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+const EVENTS = [
+    {start:"2026-08-06",end:"2026-08-09",title:"코베베이비페어",type:"eventExpo"},
+    {start:"2026-08-09",end:"2026-08-09",title:"SBS가요대전",type:"eventConcert"},
+    {start:"2026-08-13",end:"2026-08-16",title:"카페디저트페어",type:"eventExpo"},
+    {start:"2026-08-15",end:"2026-08-16",title:"코믹월드",type:"eventExpo"},
+    {start:"2026-08-19",end:"2026-08-22",title:"K-PRINT",type:"eventExpo"},
+    {start:"2026-08-20",end:"2026-08-23",title:"건축박람회",type:"eventExpo"},
+    {start:"2026-08-21",end:"2026-08-23",title:"생활낚시",type:"eventExpo"},
+    {start:"2026-08-21",end:"2026-08-23",title:"빅뱅",type:"eventStadium"},
+    {start:"2026-08-27",end:"2026-08-27",title:"K-World",type:"eventConcert"},
+    {start:"2026-08-29",end:"2026-08-30",title:"일러스타",type:"eventExpo"},
+    {start:"2026-09-04",end:"2026-09-06",title:"임영웅",type:"eventStadium"},
+    {start:"2026-10-02",end:"2026-10-02",title:"포스트말론",type:"eventStadium"},
+    {start:"2026-10-04",end:"2026-10-04",title:"씨야",type:"eventConcert"},
+    {start:"2026-10-11",end:"2026-10-11",title:"찰리푸스",type:"eventStadium"}
+];
 
-    // 3개월 로테이션 휴무 계산기 (8~9월 화수, 10~12월 월화, 1~3월 일월 완벽 대응)
-    function getOffDaysForMonth(year, month) {
-        const elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
-        let period = 0;
-        
-        if (elapsedMonths >= 0) {
-            if (elapsedMonths <= 1) { // 8월, 9월
-                period = 0; // 화, 수
-            } else if (elapsedMonths <= 4) { // 10월, 11월, 12월
-                period = 1; // 월, 화
-            } else { // 내년 1월 이후 3개월 단위
-                period = 1 + Math.floor((elapsedMonths - 2) / 3);
-            }
+function getOffDays(year, month){
+    const elapsed = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
+    let period = 0;
+
+    if(elapsed >= 0){
+        if(elapsed <= 1){ period = 0; }
+        else if(elapsed <= 4){ period = 1; }
+        else { period = 1 + Math.floor((elapsed - 2) / 3); }
+    } else {
+        period = Math.floor(elapsed / 3);
+    }
+
+    let d1 = (2 - period) % 7;
+    let d2 = (3 - period) % 7;
+
+    if(d1 < 0) d1 += 7;
+    if(d2 < 0) d2 += 7;
+
+    return [d1, d2];
+}
+
+function calculateSchedule(targetYear, targetMonth) {
+    const scheduleMap = {};
+    const lastDay = new Date(targetYear, targetMonth + 1, 0);
+    
+    let cursor = new Date(SHIFT_START);
+    let currentShift = START_SHIFT;
+    let wasOff = false;
+
+    let endDate = new Date(lastDay);
+    if (endDate < SHIFT_START) {
+        cursor = new Date(targetYear, targetMonth, 1);
+        endDate = new Date(SHIFT_START);
+    }
+
+    while (cursor <= endDate) {
+        const y = cursor.getFullYear();
+        const m = cursor.getMonth();
+        const d = cursor.getDate();
+        const dayOfWeek = cursor.getDay();
+        const [o1, o2] = getOffDays(y, m);
+
+        const isOff = (dayOfWeek === o1 || dayOfWeek === o2);
+        const key = `${y}-${m}-${d}`;
+
+        if (isOff) {
+            scheduleMap[key] = "휴";
+            wasOff = true;
         } else {
-            period = Math.floor(elapsedMonths / 3);
-        }
-        
-        let day1 = (2 - period) % 7;
-        let day2 = (3 - period) % 7;
-        if (day1 < 0) day1 += 7;
-        if (day2 < 0) day2 += 7;
-        
-        return [day1, day2];
-    }
-
-    // [패치] 휴무가 끝나고 복귀할 때 무조건 주간/야간 스위칭이 보장되는 고정 14일 주기 알고리즘
-    function getShiftTypeForDate(targetDate) {
-        const start = new Date(SHIFT_START_DATE);
-        start.setHours(0,0,0,0);
-        
-        const target = new Date(targetDate);
-        target.setHours(0,0,0,0);
-        
-        // 두 날짜 사이의 정확한 총 일수(Days) 계산
-        const diffTime = target.getTime() - start.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        
-        // 1주(7일)씩 주야가 바뀌는 주기 계산 (음수 일수 예외 보정 포함)
-        let cycleIdx = Math.floor(diffDays / 7);
-        if (diffDays < 0) {
-            cycleIdx = Math.floor(diffDays / 7);
-        }
-        
-        // 짝수 주차 주간(DAY), 홀수 주차 야간(NIGHT) 스위칭 보장
-        const isFlipped = (cycleIdx % 2 !== 0);
-        return isFlipped ? 'NIGHT' : 'DAY';
-    }
-
-    function renderCalendar(date) {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-
-        monthYearTitle.textContent = `${year}년 ${month + 1}월`;
-
-        const [offDay1, offDay2] = getOffDaysForMonth(year, month);
-        currentRuleText.textContent = `📅 이 달의 휴무: 매주 [${DAY_NAMES[offDay1]}, ${DAY_NAMES[offDay2]}]요일`;
-
-        const firstDayIndex = new Date(year, month, 1).getDay();
-        const lastDate = new Date(year, month + 1, 0).getDate();
-
-        datesGrid.innerHTML = '';
-
-        for (let i = 0; i < firstDayIndex; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.classList.add('date-cell', 'empty');
-            datesGrid.appendChild(emptyCell);
-        }
-
-        const today = new Date();
-
-        for (let day = 1; day <= lastDate; day++) {
-            const dateCell = document.createElement('div');
-            dateCell.classList.add('date-cell');
-            
-            const numDiv = document.createElement('div');
-            numDiv.className = 'date-num';
-            numDiv.textContent = day;
-            dateCell.appendChild(numDiv);
-
-            const thisDate = new Date(year, month, day);
-            const currentDayOfWeek = thisDate.getDay();
-            const badge = document.createElement('span');
-            badge.className = 'shift-badge';
-
-            if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
-                dateCell.classList.add('today');
+            if (wasOff) {
+                currentShift = (currentShift === "주") ? "야" : "주";
+                wasOff = false;
             }
+            scheduleMap[key] = currentShift;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+    }
 
-            // 1. 고정 휴무일 체크
-            if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
-                dateCell.classList.add('off-day-bg');
-                badge.classList.add('shift-off');
-                badge.textContent = '휴';
+    if (new Date(targetYear, targetMonth, 1) < SHIFT_START) {
+        cursor = new Date(SHIFT_START);
+        currentShift = START_SHIFT;
+        
+        while (cursor >= new Date(targetYear, targetMonth, 1)) {
+            const y = cursor.getFullYear();
+            const m = cursor.getMonth();
+            const d = cursor.getDate();
+            const dayOfWeek = cursor.getDay();
+            const [o1, o2] = getOffDays(y, m);
+
+            const isOff = (dayOfWeek === o1 || dayOfWeek === o2);
+            const key = `${y}-${m}-${d}`;
+
+            if (isOff) {
+                scheduleMap[key] = "휴";
             } else {
-                // 2. 패치된 14일 순환 알고리즘 적용
-                const shiftType = getShiftTypeForDate(thisDate);
-                if (shiftType === 'DAY') {
-                    badge.classList.add('shift-day');
-                    badge.textContent = '주';
-                } else {
-                    badge.classList.add('shift-night');
-                    badge.textContent = '야';
+                scheduleMap[key] = currentShift;
+                
+                const nextDate = new Date(cursor);
+                nextDate.setDate(nextDate.getDate() + 1);
+                const [no1, no2] = getOffDays(nextDate.getFullYear(), nextDate.getMonth());
+                if (nextDate.getDay() === no1 || nextDate.getDay() === no2) {
+                    currentShift = (currentShift === "주") ? "야" : "주";
                 }
             }
-            
-            dateCell.appendChild(badge);
-            datesGrid.appendChild(dateCell);
+            cursor.setDate(cursor.getDate() - 1);
         }
     }
 
-    prevBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar(currentDate);
-    });
+    return scheduleMap;
+}
 
-    nextBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar(currentDate);
-    });
+function getEvents(dateStr){
+    return EVENTS.filter(e => dateStr >= e.start && dateStr <= e.end);
+}
 
-    renderCalendar(currentDate);
+function render(){
+    days.innerHTML = "";
+
+    const year = current.getFullYear();
+    const month = current.getMonth();
+
+    title.textContent = `${year}년 ${month + 1}월`;
+
+    const offDays = getOffDays(year, month);
+    rule.textContent = `이번 달 휴무 : 매주 ${DAY_NAMES[offDays[0]]}, ${DAY_NAMES[offDays[1]]}요일`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const lastDate = new Date(year, month + 1, 0).getDate();
+
+    for(let i = 0; i < firstDay; i++){
+        const empty = document.createElement("div");
+        empty.className = "day";
+        days.appendChild(empty);
+    }
+
+    const today = new Date();
+    const scheduleCache = calculateSchedule(year, month);
+
+    for(let d = 1; d <= lastDate; d++){
+        const cell = document.createElement("div");
+        cell.className = "day";
+
+        const date = new Date(year, month, d);
+
+        if(date.getDay() === 0) cell.classList.add("sun");
+        if(date.getDay() === 6) cell.classList.add("sat");
+
+        if(
+            today.getFullYear() === year &&
+            today.getMonth() === month &&
+            today.getDate() === d
+        ){
+            cell.classList.add("today");
+        }
+
+        const num = document.createElement("div");
+        num.className = "number";
+        num.textContent = d;
+        cell.appendChild(num);
+
+        const key = `${year}-${month}-${d}`;
+        const shift = scheduleCache[key];
+
+        const badge = document.createElement("div");
+
+        if(shift === "휴"){
+            cell.classList.add("off");
+            badge.className = "badge offShift";
+            badge.textContent = "휴";
+            cell.appendChild(badge);
+        } else if(shift === "주" || shift === "야") {
+            if(shift === "주"){
+                badge.className = "badge dayShift";
+            } else {
+                badge.className = "badge nightShift";
+            }
+            badge.textContent = shift;
+            cell.appendChild(badge);
+        }
+
+        const str = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+        const events = getEvents(str);
+
+        events.forEach(e => {
+            const ev = document.createElement("div");
+            ev.className = "badge " + e.type;
+            ev.textContent = e.title;
+            cell.appendChild(ev);
+        });
+
+        days.appendChild(cell);
+    }
+}
+
+prev.onclick = function(){
+    current.setMonth(current.getMonth() - 1);
+    render();
+};
+
+next.onclick = function(){
+    current.setMonth(current.getMonth() + 1);
+    render();
+};
+
+render();
 </script>
 </body>
 </html>
