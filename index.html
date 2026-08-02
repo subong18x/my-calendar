@@ -240,44 +240,34 @@
             const badge = document.createElement('span');
             badge.classList.add('shift-badge');
 
+            // 오늘 날짜 표시 추가
+            if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                dateCell.classList.add('today');
+            }
+
             // 1. 고정 휴무일 체크
             if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
                 dateCell.classList.add('off-day-bg');
                 badge.classList.add('shift-off');
                 badge.textContent = '휴';
             } else {
-                // 2. 8월 초기 입력값 예외 보정 수식 (휴무 종료 직후 전환 완벽 고정)
-                if (year === 2026 && month === 7 && (day === 1 || day === 2 || day === 3)) {
-                    badge.classList.add('shift-night');
-                    badge.textContent = '야';
-                } 
-                else if (year === 2026 && month === 7 && (day >= 6 && day <= 10)) {
+                // 2. 주간 / 야간 근무 체크
+                const shiftType = getShiftTypeForDate(thisDate);
+                if (shiftType === 'DAY') {
                     badge.classList.add('shift-day');
                     badge.textContent = '주';
-                }
-                // 3. 전반적인 로테이션 연동 자동 계산
-                else {
-                    const currentWeekShift = getShiftTypeForDate(thisDate);
-                    if (currentWeekShift === 'DAY') {
-                        badge.classList.add('shift-day');
-                        badge.textContent = '주';
-                    } else {
-                        badge.classList.add('shift-night');
-                        badge.textContent = '야';
-                    }
+                } else {
+                    badge.classList.add('shift-night');
+                    badge.textContent = '야';
                 }
             }
-
+            
             dateCell.appendChild(badge);
-
-            if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-                dateCell.classList.add('today');
-            }
-
             datesGrid.appendChild(dateCell);
         }
     }
 
+    // 이전달, 다음달 이동 이벤트 리스너 추가
     prevBtn.addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
         renderCalendar(currentDate);
@@ -288,7 +278,10 @@
         renderCalendar(currentDate);
     });
 
+    // 최초 캘린더 렌더링 실행
     renderCalendar(currentDate);
 </script>
 </body>
+</html>
+
 </html>
