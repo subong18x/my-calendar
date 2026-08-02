@@ -21,10 +21,8 @@
             border: 1px solid #d0d7de;
             border-radius: 6px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 380px;
+            width: 380px;
             padding: 20px;
-            box-sizing: border-box;
         }
         .calendar-header {
             display: flex;
@@ -71,7 +69,7 @@
             color: #24292f;
             border-radius: 6px;
             font-weight: 500;
-            min-height: 52px;
+            min-height: 48px;
         }
         .date-num {
             font-size: 1rem;
@@ -83,15 +81,15 @@
             padding: 1px 5px;
             border-radius: 3px;
         }
-        .shift-day { background-color: #fff8c5; color: #9a6700; } /* 오전 */
-        .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 오후 */
-        .shift-off { background-color: #ddf4ff; color: #0969da; } /* 휴무 */
-        
+        .shift-day { background-color: #fff8c5; color: #9a6700; } /* 주간 */
+        .shift-night { background-color: #f2e6ff; color: #6f30a0; } /* 야간 */
+        .shift-off { background-color: #ffebe9; color: #cf222e; } /* 휴무 */
+
         .date-cell.off-day-bg {
-            background-color: #f0f8ff !important;
+            background-color: #ffebe9;
         }
         .date-cell.off-day-bg .date-num {
-            color: #0969da !important;
+            color: #cf222e;
             font-weight: bold;
         }
         .date-cell.today {
@@ -121,7 +119,7 @@
 <div class="calendar-container">
     <div class="calendar-header">
         <button id="prevBtn">&lt;</button>
-        <h2 id="monthYearTitle">근무 달력</h2>
+        <h2 id="monthYearTitle"></h2>
         <button id="nextBtn">&gt;</button>
     </div>
     <div class="days-grid">
@@ -130,125 +128,162 @@
     <div class="dates-grid" id="datesGrid"></div>
     
     <div class="info-panel">
-        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">달력을 생성하는 중...</div>
-        <div>💡 규칙: 3개월마다 휴무 자동 당겨짐 / 일주일마다 오전 오후 교대</div>
+        <div id="currentRuleText" style="font-weight: 600; color: #24292f; margin-bottom: 5px;">이번 달 휴무: 계산 중...</div>
+        <div>💡 규칙: 3개월마다 휴무 요일 변동 / 일주일마다 주야 교대</div>
         <div class="legend">
-            <span class="shift-badge shift-day">오전 오전근무</span>
-            <span class="shift-badge shift-night">오후 오후근무</span>
-            <span class="shift-badge shift-off">휴무 휴무일</span>
+            <span class="shift-badge shift-day">주 주간근무</span>
+            <span class="shift-badge shift-night">야 야간근무</span>
+            <span class="shift-badge shift-off">휴 휴무일</span>
         </div>
     </div>
 </div>
 
 <script>
-    var monthYearTitle = document.getElementById("monthYearTitle");
-    var datesGrid = document.getElementById("datesGrid");
-    var prevBtn = document.getElementById("prevBtn");
-    var nextBtn = document.getElementById("nextBtn");
-    var currentRuleText = document.getElementById("currentRuleText");
+    const monthYearTitle = document.getElementById('monthYearTitle');
+    const datesGrid = document.getElementById('datesGrid');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const currentRuleText = document.getElementById('currentRuleText');
 
-    var currentDate = new Date();
+    let currentDate = new Date();
 
-    // 데이터 연동 기준점 고정 수치
-    var BASE_YEAR = 2026;
-    var BASE_MONTH = 7; 
+    // 2026년 8월 = 화(2), 수(3) 휴무 기준점
+    const BASE_YEAR = 2026;
+    const BASE_MONTH = 7; // 8월
 
-    var DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+    // 주야 교대 기준점 수정: 8월 6일 목요일이 주간(DAY) 주차에 속하게끔 타겟 주차를 보정합니다.
+    const SHIFT_START_DATE = new Date(2026, 7, 6);
+    const START_WEEK_SHIFT = 'DAY'; 
 
-    // 3개월마다 휴무가 당겨지는 수동 매핑 데이터 (수식 버그 원천 차단)
-    var MONTHLY_OFF_MAP = {
-        "2026-6":, "2026-7":, "2026-8":, // 7, 8, 9월 화수 휴무
-        "2026-9":, "2026-10":, "2026-11":, // 10, 11, 12월 월화 휴무
-        "2026-12":, "2027-0":, "2027-1": [0, 1]   // 1, 2, 3월 일월 휴무
-    };
+    const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
-    // 타임존 오작동이 없는 초창기 일수 계산 기반의 주야 확인 시스템
-    function getSimpleShift(year, month, day) {
-        if (year === 2026 && month === 7) {
-            if (day >= 1 && day <= 3) return "NIGHT";
-            if (day >= 6 && day <= 10) return "DAY";
+    // 3개월 로테이션 휴무 계산기 (8~9월 화수, 10~12월 월화, 1~3월 일월 완벽 대응)
+    function getOffDaysForMonth(year, month) {
+        const elapsedMonths = (year - BASE_YEAR) * 12 + (month - BASE_MONTH);
+        let period = 0;
+        
+        if (elapsedMonths >= 0) {
+            if (elapsedMonths <= 1) { // 8월, 9월
+                period = 0; // 화, 수
+            } else if (elapsedMonths <= 4) { // 10월, 11월, 12월
+                period = 1; // 월, 화
+            } else { // 내년 1월 이후 3개월 단위
+                period = 1 + Math.floor((elapsedMonths - 2) / 3);
+            }
+        } else {
+            period = Math.floor(elapsedMonths / 3);
         }
         
-        var targetTime = new Date(year, month, day, 12, 0, 0).getTime();
-        var baseTime = new Date(2026, 7, 6, 12, 0, 0).getTime();
+        let day1 = (2 - period) % 7;
+        let day2 = (3 - period) % 7;
+        if (day1 < 0) day1 += 7;
+        if (day2 < 0) day2 += 7;
         
-        var diffDays = Math.floor((targetTime - baseTime) / (1000 * 60 * 60 * 24));
-        var weekIndex = Math.floor((diffDays + 4) / 7);
-        if (diffDays < -4) {
-            weekIndex = Math.floor((diffDays + 4) / 7);
+        return [day1, day2];
+    }
+
+    // 일주일 단위 주야 교대 계산기 (목요일 시작-수요일 종료 패턴 보정)
+    function getShiftTypeForDate(targetDate) {
+        // 교대 기준일인 목요일 기준으로 정렬하기 위해, 해당 날짜의 직전 목요일을 찾음
+        const targetThursday = new Date(targetDate);
+        const dayOffset = (targetThursday.getDay() - 4 + 7) % 7;
+        targetThursday.setDate(targetThursday.getDate() - dayOffset);
+        targetThursday.setHours(0,0,0,0);
+
+        const startThursday = new Date(SHIFT_START_DATE);
+        startThursday.setHours(0,0,0,0);
+
+        // 두 목요일 사이의 주(Week) 차이 계산
+        const diffWeeks = Math.round((targetThursday - startThursday) / (1000 * 60 * 60 * 24 * 7));
+        const isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
+
+        if (START_WEEK_SHIFT === 'DAY') {
+            return isFlipped ? 'NIGHT' : 'DAY';
+        } else {
+            return isFlipped ? 'DAY' : 'NIGHT';
         }
-        
-        var isNightWeek = Math.abs(weekIndex % 2) === 1;
-        return isNightWeek ? "NIGHT" : "DAY";
     }
 
     function renderCalendar(date) {
-        var year = date.getFullYear();
-        var month = date.getMonth();
+        const year = date.getFullYear();
+        const month = date.getMonth();
 
-        monthYearTitle.textContent = String(year) + "년 " + String(month + 1) + "월";
+        monthYearTitle.textContent = `${year}년 ${month + 1}월`;
 
-        var mapKey = String(year) + "-" + String(month);
-        var currentOffDays = MONTHLY_OFF_MAP[mapKey] ||;
-        
-        currentRuleText.textContent = "📅 이 달의 휴무: 매주 [" + DAY_NAMES[currentOffDays[0]] + ", " + DAY_NAMES[currentOffDays[1]] + "]요일";
+        const [offDay1, offDay2] = getOffDaysForMonth(year, month);
+        currentRuleText.textContent = `📅 이 달의 휴무: 매주 [${DAY_NAMES[offDay1]}, ${DAY_NAMES[offDay2]}]요일`;
 
-        var firstDayIndex = new Date(year, month, 1).getDay();
-        var lastDate = new Date(year, month + 1, 0).getDate();
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
 
-        datesGrid.innerHTML = "";
+        datesGrid.innerHTML = '';
 
-        for (var i = 0; i < firstDayIndex; i++) {
-            var emptyCell = document.createElement("div");
-            emptyCell.classList.add("date-cell", "empty");
+        for (let i = 0; i < firstDayIndex; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.classList.add('date-cell', 'empty');
             datesGrid.appendChild(emptyCell);
         }
 
-        var today = new Date();
+        const today = new Date();
 
-        for (var day = 1; day <= lastDate; day++) {
-            var dateCell = document.createElement("div");
-            dateCell.classList.add("date-cell");
-
-            var numDiv = document.createElement("div");
-            numDiv.classList.add("date-num");
+        for (let day = 1; day <= lastDate; day++) {
+            const dateCell = document.createElement('div');
+            dateCell.classList.add('date-cell');
+            
+            const numDiv = document.createElement('div');
+            numDiv.classList.add('date-num');
             numDiv.textContent = day;
             dateCell.appendChild(numDiv);
 
-            var currentDayOfWeek = new Date(year, month, day).getDay();
-            var badge = document.createElement("span");
-            badge.classList.add("shift-badge");
+            const thisDate = new Date(year, month, day);
+            const currentDayOfWeek = thisDate.getDay();
+            const badge = document.createElement('span');
+            badge.classList.add('shift-badge');
 
-            if (currentDayOfWeek === currentOffDays[0] || currentDayOfWeek === currentOffDays[1]) {
-                dateCell.classList.add("off-day-bg");
-                badge.classList.add("shift-off");
-                badge.textContent = "휴무";
+            // 1. 고정 휴무일 체크
+            if (currentDayOfWeek === offDay1 || currentDayOfWeek === offDay2) {
+                dateCell.classList.add('off-day-bg');
+                badge.classList.add('shift-off');
+                badge.textContent = '휴';
             } else {
-                var shiftType = getSimpleShift(year, month, day);
-                if (shiftType === "DAY") {
-                    badge.classList.add("shift-day");
-                    badge.textContent = "오전";
-                } else {
-                    badge.classList.add("shift-night");
-                    badge.textContent = "오후";
+                // 2. 8월 초기 입력값 예외 보정 수식 (휴무 종료 직후 전환 완벽 고정)
+                if (year === 2026 && month === 7 && (day === 1 || day === 2 || day === 3)) {
+                    badge.classList.add('shift-night');
+                    badge.textContent = '야';
+                } 
+                else if (year === 2026 && month === 7 && (day >= 6 && day <= 10)) {
+                    badge.classList.add('shift-day');
+                    badge.textContent = '주';
+                }
+                // 3. 전반적인 로테이션 연동 자동 계산
+                else {
+                    const currentWeekShift = getShiftTypeForDate(thisDate);
+                    if (currentWeekShift === 'DAY') {
+                        badge.classList.add('shift-day');
+                        badge.textContent = '주';
+                    } else {
+                        badge.classList.add('shift-night');
+                        badge.textContent = '야';
+                    }
                 }
             }
+
             dateCell.appendChild(badge);
 
             if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-                dateCell.classList.add("today");
+                dateCell.classList.add('today');
             }
 
             datesGrid.appendChild(dateCell);
         }
     }
 
-    prevBtn.addEventListener("click", function() {
+    prevBtn.addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
         renderCalendar(currentDate);
     });
 
-    nextBtn.addEventListener("click", function() {
+    nextBtn.addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() + 1);
         renderCalendar(currentDate);
     });
