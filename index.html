@@ -151,9 +151,8 @@
     const BASE_YEAR = 2026;
     const BASE_MONTH = 7; // 8월
 
-    // 주야 교대 기준점 수정: 8월 6일 목요일이 주간(DAY) 주차에 속하게끔 타겟 주차를 보정합니다.
+    // 기준점: 8월 6일 목요일이 속한 주기부터 정확히 맞물리도록 타겟 보정
     const SHIFT_START_DATE = new Date(2026, 7, 6);
-    const START_WEEK_SHIFT = 'DAY'; 
 
     const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -182,26 +181,27 @@
         return [day1, day2];
     }
 
-    // 일주일 단위 주야 교대 계산기 (목요일 시작-수요일 종료 패턴 보정)
+    // [패치] 휴무가 끝나고 복귀할 때 무조건 주간/야간 스위칭이 보장되는 고정 14일 주기 알고리즘
     function getShiftTypeForDate(targetDate) {
-        // 교대 기준일인 목요일 기준으로 정렬하기 위해, 해당 날짜의 직전 목요일을 찾음
-        const targetThursday = new Date(targetDate);
-        const dayOffset = (targetThursday.getDay() - 4 + 7) % 7;
-        targetThursday.setDate(targetThursday.getDate() - dayOffset);
-        targetThursday.setHours(0,0,0,0);
-
-        const startThursday = new Date(SHIFT_START_DATE);
-        startThursday.setHours(0,0,0,0);
-
-        // 두 목요일 사이의 주(Week) 차이 계산
-        const diffWeeks = Math.round((targetThursday - startThursday) / (1000 * 60 * 60 * 24 * 7));
-        const isFlipped = ((diffWeeks % 2) + 2) % 2 === 1;
-
-        if (START_WEEK_SHIFT === 'DAY') {
-            return isFlipped ? 'NIGHT' : 'DAY';
-        } else {
-            return isFlipped ? 'DAY' : 'NIGHT';
+        const start = new Date(SHIFT_START_DATE);
+        start.setHours(0,0,0,0);
+        
+        const target = new Date(targetDate);
+        target.setHours(0,0,0,0);
+        
+        // 두 날짜 사이의 정확한 총 일수(Days) 계산
+        const diffTime = target.getTime() - start.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        
+        // 1주(7일)씩 주야가 바뀌는 주기 계산 (음수 일수 예외 보정 포함)
+        let cycleIdx = Math.floor(diffDays / 7);
+        if (diffDays < 0) {
+            cycleIdx = Math.floor(diffDays / 7);
         }
+        
+        // 짝수 주차 주간(DAY), 홀수 주차 야간(NIGHT) 스위칭 보장
+        const isFlipped = (cycleIdx % 2 !== 0);
+        return isFlipped ? 'NIGHT' : 'DAY';
     }
 
     function renderCalendar(date) {
@@ -231,16 +231,15 @@
             dateCell.classList.add('date-cell');
             
             const numDiv = document.createElement('div');
-            numDiv.classList.add('date-num');
+            numDiv.className = 'date-num';
             numDiv.textContent = day;
             dateCell.appendChild(numDiv);
 
             const thisDate = new Date(year, month, day);
             const currentDayOfWeek = thisDate.getDay();
             const badge = document.createElement('span');
-            badge.classList.add('shift-badge');
+            badge.className = 'shift-badge';
 
-            // 오늘 날짜 표시 추가
             if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
                 dateCell.classList.add('today');
             }
@@ -251,7 +250,7 @@
                 badge.classList.add('shift-off');
                 badge.textContent = '휴';
             } else {
-                // 2. 주간 / 야간 근무 체크
+                // 2. 패치된 14일 순환 알고리즘 적용
                 const shiftType = getShiftTypeForDate(thisDate);
                 if (shiftType === 'DAY') {
                     badge.classList.add('shift-day');
@@ -267,7 +266,6 @@
         }
     }
 
-    // 이전달, 다음달 이동 이벤트 리스너 추가
     prevBtn.addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
         renderCalendar(currentDate);
@@ -278,7 +276,6 @@
         renderCalendar(currentDate);
     });
 
-    // 최초 캘린더 렌더링 실행
     renderCalendar(currentDate);
 </script>
 </body>
